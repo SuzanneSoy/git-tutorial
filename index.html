@@ -7,17 +7,27 @@ body { width: 63rem; font-size: 1.2rem; text-align:justify; }
 textarea { display:block; width: 63rem; height: 18rem; font-size: 1.2rem; }
 input { display:block; font-size: 1.2rem; }
 table, td { border:thin solid black; border-collapse: collapse; font-size: 1.2rem; }
+td.cell-path { max-width: 26rem; }
+td.cell-contents { max-width: 36rem; }
 .specialchar { color: red; }
 .hex-prefix { color: lightgrey; }
 .hex { color: brown; }
-.hex-hash { border: thin solid brown; display: block; width: max-content; }
-.hex-hash.hilite-src { background: lightyellow; border-color: red; }
+.hex-hash { display: block; width: max-content; }
+.hex-hash, .plain-hash-or-ref { border: thin solid brown; }
+.hex-hash.hilite-src, .plain-hash-or-ref.hilite-src { background: lightyellow; border-color: red; }
 .object-hash.hilite-dest { background: lightyellow; border-color: red; }
 .object-hash { border: thin solid transparent; }
-.space { text-decoration: underline; color: brown; opacity: 0.5; }
+.space { text-decoration: underline; color: brown; opacity: 0.5; white-space: pre; }
 .deflated { color: red; }
 .directory { color: darkcyan; }
 .error { color: orangered; }
+.newline:after {
+  content: '';
+  display:inline-block;
+  width:100%;
+  height:0;
+}
+code { word-wrap: break-word; }
 </style>
 </head>
 <body>
@@ -77,14 +87,17 @@ table, td { border:thin solid black; border-collapse: collapse; font-size: 1.2re
     return hex;
   }
   function ___specialchars_and_colour(s) {
-    return ___specialchars(s)
-        .replace(/[^-a-zA-Z0-9+_/!%$@.()]/g, function (c) {
+    return s.replace(/[^-a-zA-Z0-9+_/!%$@.():]/g, function (c) {
           switch (c) {
-            case " ":  return '<span class="space">&nbsp;</span>'; break;
-            case "\0": return '<span class="specialchar">\\000</span>'; break;
+            case " ":  return '<span class="space"> </span>'; break;
+            case "\0": return '<span class="specialchar newline">\\000</span>'; break;
             case "\r": return '<span class="specialchar">\\r</span>'; break;
-            case "\n": return '<span class="specialchar">\\n</span>'; break;
+            case "\n": return '<span class="specialchar newline">\\n</span>'; break;
             case "\t": return '<span class="specialchar">\\t</span>'; break;
+            case '&':  return '&amp;'; break;
+            case '<':  return '&lt;'; break;
+            case '>':  return '&gt;'; break;
+            case '"':  return '&quot;'; break;
             default:   return '<span class="specialchar">\\x'+___left_pad(c.charCodeAt(0).toString(16), 0, 2)+'</span>'; break;
           }
         });
@@ -97,10 +110,27 @@ table, td { border:thin solid black; border-collapse: collapse; font-size: 1.2re
         return { left: 0, top: 0 };
     }
   }
+  var global_current_hilite = { src: false, dests: [] };
+  function ___hilite_off() {
+    if (global_current_hilite.src) {
+      global_current_hilite.src.classList.remove('hilite-src');
+    }
+    for (var d = 0; d < global_current_hilite.dests.length; d++) {
+      global_current_hilite.dests[d].classList.remove('hilite-dest');
+    }
+    global_current_hilite = { src: false, dests: [] };
+    document.getElementById('lines').innerHTML = '';
+  }
   function ___hilite(src, dest) {
+    ___hilite_off();
     var src = document.getElementById(src);
+    var wrapper = src;
+    while (wrapper && !wrapper.classList.contains('hilite-wrapper')) { wrapper = wrapper.parentElement; }
+    var dests = (wrapper || document).getElementsByClassName(dest);
+
+    global_current_hilite = { src, dests };
+
     src.classList.add('hilite-src');
-    var dests = document.getElementsByClassName(dest);
     var lines = document.getElementById('lines');
     lines.innerHTML = '';
     for (var d = 0; d < dests.length; d++) {
@@ -124,11 +154,11 @@ table, td { border:thin solid black; border-collapse: collapse; font-size: 1.2re
 
       var op = getOffset(l1.offsetParent);
 
-      var xa = osrc.left - op.left + src.offsetWidth;
-      var ya = osrc.top  - op.top  + src.offsetHeight / 2;
-      var xb = otr.left - op.left + tr.offsetWidth;
-      var yb = otr.top  - op.top  + tr.offsetHeight / 2;
-      var x = Math.max(xa, xb) + (50 * i);
+      var xa = Math.floor(osrc.left - op.left + src.offsetWidth);
+      var ya = Math.floor(osrc.top  - op.top  + src.offsetHeight / 2);
+      var xb = Math.floor(otr.left - op.left + tr.offsetWidth);
+      var yb = Math.floor(otr.top  - op.top  + tr.offsetHeight / 2);
+      var x = Math.max(xa, xb) + (50 * (d+1));
       if (ya > yb) {
         var tmpx = xa;
         var tmpy = ya;
@@ -143,38 +173,33 @@ table, td { border:thin solid black; border-collapse: collapse; font-size: 1.2re
       var p3 = { left: x, top: yb };
       var p4 = { left: xb, top: yb };
 
+      var thickness = 2;
+
       // line 1
       l1.style.width = p2.left-p1.left;
-      console.log(l1.style.width);
-      l1.style.height = '1px';
+      l1.style.height = thickness + 'px';
       l1.style.backgroundColor = 'red';
       l1.style.top  = p1.top;
       l1.style.left = p1.left;
       // line 2
-      l2.style.width = '1px';
-      l2.style.height = p3.top-p2.top;
+      l2.style.width = thickness + 'px';
+      l2.style.height = p3.top-p2.top + thickness;
       l2.style.backgroundColor = 'red';
       l2.style.top  = p2.top;
       l2.style.left = p2.left;
       // line 3
       l3.style.width = p3.left-p4.left;
-      l3.style.height = '1px';
+      l3.style.height = thickness+'px';
       l3.style.backgroundColor = 'red';
       l3.style.top  = p4.top;
       l3.style.left = p4.left;
     }
   }
   function ___lolite(src, dest) {
-    var src = document.getElementById(src);
-    src.classList.remove('hilite-src');
-    var dests = document.getElementsByClassName(dest);
-    for (var d = 0; d < dests.length; d++) {
-      dests[d].classList.remove('hilite-dest');
-    }
   }
   function ___specialchars_and_colour_and_hex(s) {
     if (s.substr(0,5) == "tree ") {
-      sp = s.split('\0');
+      var sp = s.split('\0');
       sp[0] = ___specialchars_and_colour(sp[0]);
       sp[1] = ___specialchars_and_colour(sp[1]);
       for (i = 2; i < sp.length; i++) {
@@ -186,7 +211,42 @@ table, td { border:thin solid black; border-collapse: collapse; font-size: 1.2re
               + '</span>'
               + ___specialchars_and_colour(sp[i].substr(20));
       }
-      return sp.join('<span class="specialchar">\\000</span>');
+      return sp.join('<span class="specialchar newline">\\000</span>');
+    } else if (/^[0-9a-f]{40}$/.test(s)) {
+      var id=global_element_id++;
+      var hash = "object-hash-"+s;
+      return '<span id="'+id+'" class="hex-hash" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
+              + s
+              + '</span>';
+    } else if (/^ref: refs\/[^\n]*$/.test(s)) {
+      var id=global_element_id++;
+      var hash = "object-hash-"+s.substr(5);
+      return s.substr(0,5)
+             + '<span id="'+id+'" class="plain-hash-or-ref" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
+             + s.substr(5)
+             + '</span>';
+    } else if(s.substr(0,7) == "commit ") {
+      var sz = s.split('\0');
+      var sp = sz[1].split('\n');
+      sz[0] = ___specialchars_and_colour(sz[0]);
+      var i;
+      for (i = 0; i < sp.length && sp[i] != ''; i++) {
+        if (/tree [0-9a-f]{40}/.test(sp[i])) {
+          var id=global_element_id++;
+          var hash = "object-hash-"+sp[i].substr(5);
+          sp[i] = ___specialchars_and_colour(sp[i].substr(0,5))
+                + '<span id="'+id+'" class="plain-hash-or-ref" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
+                + sp[i].substr(5)
+                + '</span>';
+        } else {
+          sp[i] = ___specialchars_and_colour(sp[i]);
+        }
+      }
+      for (; i < sp.length; i++) {
+        sp[i] = ___specialchars_and_colour(sp[i]);
+      }
+      var sp_joined = sp.join('<span class="specialchar newline">\\n</span>');
+      return [sz[0], sp_joined].join('<span class="specialchar newline">\\000</span>');
     } else {
       return ___specialchars_and_colour(s);
     }
@@ -242,18 +302,24 @@ table, td { border:thin solid black; border-collapse: collapse; font-size: 1.2re
   function ___format_filepath(x) {
     var sp = x.split('/');
     if (sp.length > 3 && sp[sp.length-3] == 'objects' && /^[0-9a-f]{2}$/.test(sp[sp.length-2]) && /^[0-9a-f]{38}$/.test(sp[sp.length-1])) {
-      return ___specialchars_and_colour(sp.slice(0, sp.length-2).join('/')+(sp.length > 0 ? '/' : ''))
+      return sp.slice(0, sp.length-2).map(___specialchars_and_colour).join('/')+(sp.length > 2 ? '/' : '')
            + '<span class="object-hash object-hash-'+sp.slice(sp.length-2).join('')+'">'
-           + ___specialchars_and_colour(sp.slice(sp.length-2).join('/'))
+           + sp.slice(sp.length-2).map(___specialchars_and_colour).join('/')
+           + "</span>";
+    } else if (sp.length > 1 && sp.indexOf('refs') >= 0 && sp.length > sp.indexOf('refs') + 1) {
+      var refs_idx = sp.indexOf('refs');
+      return sp.slice(0, refs_idx).map(___specialchars_and_colour).join('/')+'/'
+           + '<span class="object-hash object-hash-'+sp.slice(refs_idx).join('/')+'">'//TODO
+           + sp.slice(refs_idx).map(___specialchars_and_colour).join('/')
            + "</span>";
     } else {
       return ___specialchars_and_colour(x);
     }
   }
   function ___format_entry(x) {
-    return "<tr><td><code>"
+    return '<tr><td class="cell-path"><code>'
       + ___format_filepath(x[0])
-      + "</code></td><td>"
+      + '</code></td><td class="cell-contents">'
       + (x[1] === null
           ? '<span class="directory">Directory</span>'
           : ("<code>" + ___specialchars_and_colour_and_hex_and_zlib(x[1]) + "</code>"))
@@ -264,7 +330,7 @@ table, td { border:thin solid black; border-collapse: collapse; font-size: 1.2re
       .sort((a,b) => a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0))
       .map(___format_entry);
     var id = global_element_id++;
-    return "Filesystem contents: " + entries.length + " files and directories. "
+    return '<div class="hilite-wrapper">Filesystem contents: ' + entries.length + " files and directories. "
       + '<a href="javascript: ___copyprintf_click(\'elem-'+id+'\');">'
       + "Copy commands to recreate in *nix terminal"
       + "</a>."
@@ -272,7 +338,7 @@ table, td { border:thin solid black; border-collapse: collapse; font-size: 1.2re
       + '<textarea id="elem-'+id+'" disabled="disabled" style="display:none">'
       + ___specialchars(___filesystem_to_printf(fs))
       + '</textarea>'
-      + "<table>" + entries.join('') + "</table>";
+      + "<table>" + entries.join('') + "</table></div>";
   }
   function ___copyprintf_click(id) {
     var elem = document.getElementById(id);
@@ -339,6 +405,11 @@ function write(filename, data) {
 function mkdir(dirname) {
   return filesystem[dirname] = null;
 }
+
+current_directory = '';
+function cd(d) {
+  current_directory = d;
+}
 </textarea>
 <input type="button" value="eval" onClick="___git_eval(1)">
 <div id="out1"></div>
@@ -363,7 +434,7 @@ function listdir(dirname) {
 <p>Our imaginary user will create a <code>proj</code> directory,
 and start filling in some files.</p>
 <textarea id="in3">
-var workdir='proj';
+cd('proj');
 mkdir('proj');
 write('proj/README', 'This is my Scheme project.\n');
 mkdir('proj/src');
@@ -383,7 +454,7 @@ function join_paths(a, b) {
 }
 
 function git_init_mkdir() {
-  mkdir(join_paths(workdir, '.git'));
+  mkdir(join_paths(current_directory, '.git'));
 }
 
 git_init_mkdir();
@@ -399,16 +470,16 @@ contents of the file. <!-- or have a hash oracle that always returns a
 new number. --></p>
 <textarea id="in5">
 function hash_object(must_write, type, is_data, path_or_data) {
-  var data = is_data ? path_or_data : read(workdir + "/" + path_or_data);
+  var data = is_data ? path_or_data : read(current_directory + "/" + path_or_data);
 
   object_contents = type + ' ' + data.length + '\0' + data;
 
   var hash = sha1(object_contents)
 
   if (must_write) {
-    mkdir(workdir + '/.git/objects');
-    mkdir(workdir + '/.git/objects/' + hash.slice(0,2));
-    var object_path = workdir + '/.git/objects/' + hash.slice(0,2) + '/' + hash.slice(2);
+    mkdir(join_paths(current_directory, '.git/objects'));
+    mkdir(join_paths(current_directory, '.git/objects/' + hash.slice(0,2)));
+    var object_path = join_paths(current_directory, '.git/objects/' + hash.slice(0,2) + '/' + hash.slice(2));
     write(object_path, deflate(object_contents));
   }
 
@@ -547,7 +618,7 @@ function store_tree_from_paths(paths) {
 // git add README src/main.scm
 store_tree_from_paths(["README", "src/main.scm"]);
 </textarea>
-<input type="button" value="eval" id="initial-focus" onClick="___git_eval(11)">
+<input type="button" value="eval" onClick="___git_eval(11)">
 <div id="out11"></div>
   
 <p>Now that the GIT database contains the entire tree for the current version,
@@ -605,7 +676,7 @@ function format_timezone(tm) {
   The first commit has no parent, which is represented by passing
   the empty list.</p>
 <textarea id="in13">
-store_commit(
+initial_commit = store_commit(
   store_tree_from_paths(["README", "src/main.scm"]),
   [],
   {name:'Example User', email:'user@example.com', date:new Date(1617120803000), timezoneMinutes: +60},
@@ -617,34 +688,47 @@ store_commit(
 
 <h2>Branches</h2>
 <textarea id="in14">
+function branch_force(branch_name, commit_hash) {
+  mkdir(join_paths(current_directory, '.git/refs'));
+  mkdir(join_paths(current_directory, '.git/refs/heads'));
+  write(join_paths(current_directory, '.git/refs/heads/' + branch_name), commit_hash);
+}
+
+// git branch -f main 0123456789012345678901234567890123456789
+branch_force('main', initial_commit);
 </textarea>
 <input type="button" value="eval" onClick="___git_eval(14)">
 <div id="out14"></div>
 
 <h2><code>HEAD</code></h2>
 <p>
-  write here
+  The HEAD indicates the "current" commit. It is set at first as part of the <code>git init</code> routine.
 </p>
 <textarea id="in15">
-  write(join_paths(workdir, '.git/HEAD'), 'ref: refs/heads/main');
+function git_init_head() {
+  write(join_paths(current_directory, '.git/HEAD'), 'ref: refs/heads/main');
+}
+
+git_init_head();
 </textarea>
 <input type="button" value="eval" onClick="___git_eval(15)">
 <div id="out15"></div>
 
 <h2>Tags</h2>
 <textarea id="in16">
-  gitconfig = {
-    user: {
-      name: 'Example User',
-      email: 'user@example.com',
-    }
+var gitconfig = {
+  user: {
+    name: 'Example User',
+    email: 'user@example.com',
   }
+}
 </textarea>
 <input type="button" value="eval" onClick="___git_eval(16)">
 <div id="out16"></div>
 
 <h2><code>git commit</code></h2>
-<p></p>
+<p>If the <code>HEAD</code> points to a commit hash, then <code>git commit</code> updates the <code>HEAD</code> to point to the new commit.
+  Otherwise, when the <code>HEAD</code> points to a branch, then the target branch (represented by a file named <code>.git/refs/heads/the_branch_name</code>) is updated.</p>
 <textarea id="in17">
 gitconfig = {
   user: {
@@ -652,20 +736,63 @@ gitconfig = {
     email: 'user@example.com',
   }
 }
-function git_commit(file_paths) {
-  var now = Date.now();
-  var timezoneMinutes = -(now.getTimezoneOffset());
-  store_commit(
-  store_tree_from_paths(file_paths),
-  [parse_head(join_paths(workdir, '.git/HEAD'))],
-  {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
-  {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
-  'Initial commit');
 
+function git_commit(file_paths, message) {
+  var now = new Date();
+  var timestamp = (+now)/1000;
+  var timezoneMinutes = -(now.getTimezoneOffset());
+  
+  var new_commit_hash = store_commit(
+    store_tree_from_paths(file_paths),
+    [git_rev_parse('HEAD')],
+    {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
+    {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
+    message || editor());
+
+  var referenced_branch = git_symbolic_ref('HEAD');
+  if (referenced_branch) {
+    // Update the target of the ref:
+    write(join_paths(current_directory, '.git/' + referenced_branch), new_commit_hash);
+  } else {
+    // Detached HEAD, update .git/HEAD directly.
+    write(join_paths(current_directory, '.git/HEAD'), new_commit_hash);
+  }
 }
+
+function git_rev_parse(file) {
+  var referenced_branch = git_symbolic_ref('HEAD');
+  if (referenced_branch) {
+    return read(join_paths(current_directory, '.git/' + referenced_branch));
+  } else {
+    return read(join_paths(current_directory, '.git/HEAD'))
+  }
+}
+
+function git_symbolic_ref(ref) {
+  var head_file = join_paths(current_directory, '.git/HEAD');
+  if (read(head_file).startsWith('ref: ')) {
+    return read(head_file).substr('ref: '.length);
+  } else {
+    return false;
+  }
+}
+
+var editor = function() { return window.prompt('Commit message:'); }
+
+git_commit(['README', 'src/main.scm']);
 </textarea>
 <input type="button" value="eval" onClick="___git_eval(17)">
 <div id="out17"></div>
+
+<h2><code>git init</code></h2>
+<textarea id="in18">
+function git_init() {
+  git_init_mkdir();
+  git_init_head();
+}
+</textarea>
+<input id="initial-focus" type="button" value="eval" onClick="___git_eval(18)">
+<div id="out18"></div>
 
 
 END OF DOCUMENT
