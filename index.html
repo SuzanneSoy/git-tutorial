@@ -406,6 +406,10 @@ function mkdir(dirname) {
   return filesystem[dirname] = null;
 }
 
+function exists(filename) {
+  return typeof(filesystem[filename]) !== 'undefined';
+}
+
 current_directory = '';
 function cd(d) {
   current_directory = d;
@@ -687,15 +691,27 @@ initial_commit = store_commit(
 <div id="out13"></div>
 
 <h2>Branches</h2>
+<p>A branch is a pointer to a commit, stored in a file in <code>.git/refs/heads/name_of_the_branch</code>.
+  The branch can be overwritten with <code>git branch -f</code>. Also, as will be explained later,
+  <code>git commit</code> can update the pointer of a branch.</p>
 <textarea id="in14">
-function branch_force(branch_name, commit_hash) {
+function git_branch(branch_name, commit_hash, force) {
   mkdir(join_paths(current_directory, '.git/refs'));
   mkdir(join_paths(current_directory, '.git/refs/heads'));
-  write(join_paths(current_directory, '.git/refs/heads/' + branch_name), commit_hash);
+  if (!force && exists(join_paths(current_directory, '.git/refs/heads/' + branch_name))) {
+    alert("branch already exists");
+    return false;
+  } else {
+    write(join_paths(current_directory, '.git/refs/heads/' + branch_name), commit_hash + '\n');
+    return true;
+  }
 }
 
+// git branch main 0123456789012345678901234567890123456789
+git_branch('main', initial_commit, false);
+
 // git branch -f main 0123456789012345678901234567890123456789
-branch_force('main', initial_commit);
+git_branch('main', initial_commit, true);
 </textarea>
 <input type="button" value="eval" onClick="___git_eval(14)">
 <div id="out14"></div>
@@ -706,7 +722,7 @@ branch_force('main', initial_commit);
 </p>
 <textarea id="in15">
 function git_init_head() {
-  write(join_paths(current_directory, '.git/HEAD'), 'ref: refs/heads/main');
+  write(join_paths(current_directory, '.git/HEAD'), 'ref: refs/heads/main\n');
 }
 
 git_init_head();
@@ -714,22 +730,10 @@ git_init_head();
 <input type="button" value="eval" onClick="___git_eval(15)">
 <div id="out15"></div>
 
-<h2>Tags</h2>
-<textarea id="in16">
-var gitconfig = {
-  user: {
-    name: 'Example User',
-    email: 'user@example.com',
-  }
-}
-</textarea>
-<input type="button" value="eval" onClick="___git_eval(16)">
-<div id="out16"></div>
-
 <h2><code>git commit</code></h2>
 <p>If the <code>HEAD</code> points to a commit hash, then <code>git commit</code> updates the <code>HEAD</code> to point to the new commit.
   Otherwise, when the <code>HEAD</code> points to a branch, then the target branch (represented by a file named <code>.git/refs/heads/the_branch_name</code>) is updated.</p>
-<textarea id="in17">
+<textarea id="in16">
 gitconfig = {
   user: {
     name: 'Example User',
@@ -752,37 +756,96 @@ function git_commit(file_paths, message) {
   var referenced_branch = git_symbolic_ref('HEAD');
   if (referenced_branch) {
     // Update the target of the ref:
-    write(join_paths(current_directory, '.git/' + referenced_branch), new_commit_hash);
+    write(join_paths(current_directory, '.git/' + referenced_branch), new_commit_hash + '\n');
   } else {
     // Detached HEAD, update .git/HEAD directly.
-    write(join_paths(current_directory, '.git/HEAD'), new_commit_hash);
+    write(join_paths(current_directory, '.git/HEAD'), new_commit_hash + '\n');
   }
+  return new_commit_hash;
 }
 
-function git_rev_parse(file) {
-  var referenced_branch = git_symbolic_ref('HEAD');
+function git_rev_parse(ref) {
+  var referenced_branch = git_symbolic_ref(ref);
   if (referenced_branch) {
-    return read(join_paths(current_directory, '.git/' + referenced_branch));
+    return git_rev_parse(symbolic_ref_target));
+  } else if (/[0-9a-f]{40}/.test(ref)) {
+    return ref;
+  } else if (ref == 'HEAD' || ref.startsWith('refs/')) {
+    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/' + ref))));
   } else {
-    return read(join_paths(current_directory, '.git/HEAD'))
+    alert('unknown ref');
+    return false;
   }
 }
 
 function git_symbolic_ref(ref) {
-  var head_file = join_paths(current_directory, '.git/HEAD');
-  if (read(head_file).startsWith('ref: ')) {
-    return read(head_file).substr('ref: '.length);
+  var ref_file = join_paths(current_directory, '.git/' + ref);
+  if (read(ref_file).startsWith('ref: ')) {
+    return trim_newline(read(head_file)).substr('ref: '.length);
   } else {
     return false;
   }
 }
 
+function trim_newline(s) {
+  if (s.endsWith('\n')) { return s.substr(0, s.length-1); } else { return s; }
+}
+
 var editor = function() { return window.prompt('Commit message:'); }
 
-git_commit(['README', 'src/main.scm']);
+write('README', 'This is my Scheme project -- with updates!');
+var second_commit = git_commit(['README', 'src/main.scm']);
+</textarea>
+<input type="button" value="eval" onClick="___git_eval(16)">
+<div id="out16"></div>
+
+<h2>Tags</h2>
+<p>Tags are like branches, but are stored in <code>.git/refs/tags/the_tag_name</code>
+  and a tag is not normally modified. Once created, it's supposed to always point
+  to the same version.</p>
+<p>GIT does offer a <code>git tag -f existing-tag new-hash</code> command,
+  but using it should be a rare occurrence.</p>
+<textarea id="in17">
+  function git_tag(tag_name, commit_hash) {
+    mkdir(join_paths(current_directory, '.git/refs'));
+    mkdir(join_paths(current_directory, '.git/refs/tags'));
+    if (exists(join_paths(current_directory, '.git/refs/tags/' + tag_name))) {
+      alert("tag already exists");
+      return false;
+    } else {
+      write(join_paths(current_directory, '.git/refs/tags/' + branch_name), commit_hash);
+      return true;
+    }
+  }
+  
+  // git tag v1.0 0123456789012345678901234567890123456789
+  git_tag('v1.0', second_commit);
 </textarea>
 <input type="button" value="eval" onClick="___git_eval(17)">
 <div id="out17"></div>
+
+<p>More importantly, the HEAD does not normally point to a tag. Although nothing actually
+  prevents writing <code>ref: refs/tags/v1.0</code> into <code>.git/HEAD</code>, the GIT
+  commands will not automatically do this. For example, <code>git checkout tag-or-branch-or-hash</code>
+  will put a symbolic <code>ref: </code> in <code>.git/HEAD</code> only if the argument is a branch.</p>
+
+  <h2><code>git init</code></h2>
+<textarea id="in19">
+function git_checkout(tag_or_branch_or_hash) {
+  if (exists(join_paths(current_directory, '.git/refs/heads/' + tag_or_branch_or_hash))) {
+    write(join_paths(current_directory, '.git/HEAD'), 'ref: refs/heads/' + tag_or_branch_or_hash + '\n');
+  } else {
+    write(join_paths(current_directory, '.git/HEAD'), git_rev_parse(tag_or_branch_or_hash));
+  }
+  checkout_files(git_rev_parse('HEAD'));
+}
+
+function checkout_files(hash) {
+  alert("TODO");
+}
+</textarea>
+<input id="initial-focus" type="button" value="eval" onClick="___git_eval(19)">
+<div id="out19"></div>
 
 <h2><code>git init</code></h2>
 <textarea id="in18">
