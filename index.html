@@ -254,18 +254,22 @@ h1:hover + .permalink, .permalink:hover { opacity: 1; }
   }
   function ___lolite(src, dest) {
   }
+  function ___hex_hash(s) {
+    var id = ___global_unique_id++;
+    var hash = "object-hash-"+___to_hex(s.substr(0,20));
+    return '<span id="'+id+'" class="hex-hash" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
+              + ___to_hex_for_printf(s.substr(0,10))
+              + ___to_hex_for_printf(s.substr(10,10))
+              + '</span>'
+              + ___specialchars_and_colour(s.substr(20) /* should be empty unless there's a bug */);
+  }
   function ___specialchars_and_colour_and_hex(s) {
     if (s.substr(0,5) == "tree ") {
       var sp = s.split('\0');
       sp[0] = ___specialchars_and_colour(sp[0]);
       sp[1] = ___specialchars_and_colour(sp[1]);
       for (i = 2; i < sp.length; i++) {
-        var id=___global_unique_id++;
-        var hash = "object-hash-"+___to_hex(sp[i].substr(0,20));
-        sp[i] = '<span id="'+id+'" class="hex-hash" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
-              + ___to_hex_for_printf(sp[i].substr(0,10))
-              + ___to_hex_for_printf(sp[i].substr(10,10))
-              + '</span>'
+        sp[i] = ___hex_hash(sp[i].substr(0,20))
               + ___specialchars_and_colour(sp[i].substr(20));
       }
       return sp.join('<span class="specialchar newline">\\000</span>');
@@ -284,6 +288,56 @@ h1:hover + .permalink, .permalink:hover { opacity: 1; }
              + ___specialchars_and_colour(s.substr(5, s.length-6))
              + '</span>'
              + ___specialchars_and_colour(s.substr(s.length-1));
+    } else if(s.substr(0,4) == "DIRC") {
+      var html = 'DIRC'; // magic
+      var i = 4;
+      var binary_span = function(bits) {
+        var bytes = bits / 8;
+        html += '<span class="newline">' + ___to_hex_for_printf(s.substr(i, bytes)) + '</span>';
+        i += bytes;
+      }
+      binary_span(32); // version
+      binary_span(32); // entries
+
+      var entry_start = i;
+      while (i + 20 < s.length) {
+        binary_span(64); // ctime
+        binary_span(64); // mtime
+        binary_span(32); // device
+        binary_span(32); // inode
+        binary_span(32); // mode (stored as octal → binary)
+        binary_span(32); // uid
+        binary_span(32); // gid
+        binary_span(32); // size
+        html += ___hex_hash(s.substr(i, 20)); // hash
+        i += 20;
+        var length = s.substr(i, 2);
+        length = length.charCodeAt(0) * 256 + length.charCodeAt(1);
+        length &= 0xfff;
+        binary_span(16); // 4 bits flags, 12 bits file length
+        // file path until null
+        html += ___specialchars_and_colour(s.substr(i, length));
+        i += length;
+        while (i < s.length && (i - entry_start) % 8 != 0) {
+          // null bytes
+          if (s.charCodeAt(i) == 0) {
+            // as expected
+            html += '<span class="specialchar">\\000</span>';
+          } else {
+            // there's a bug in this git index, display the hex chars as they come.
+            html += ___specialchars_and_colour(s.substr(i, 1));
+          }
+          i++;
+        }
+        entry_start = i;
+      }
+
+      html += ___hex_hash(s.substr(i, 20)); // hash
+      i += 20;
+
+      html += ___specialchars_and_colour(s.substr(i)); // should be empty
+
+      return html;
     } else if(s.substr(0,7) == "commit ") {
       var sz = s.split('\0');
       var sp = sz[1].split('\n');
@@ -397,7 +451,7 @@ h1:hover + .permalink, .permalink:hover { opacity: 1; }
       + "</a>."
       + "<br />"
       + '<textarea id="elem-'+id+'" disabled="disabled" style="display:none">'
-      + ___specialchars(___filesystem_to_printf(fs))
+      + ___specialchars(___filesystem_to_printf(fs) || 'echo "Empty filesystem."')
       + '</textarea>'
       + "<table>" + entries.join('') + "</table></div>";
   }
@@ -1140,12 +1194,70 @@ git_checkout(initial_commit);
   to the default branch (a file which does not exist yet, as this branch does not contain any commit at this point).</p>
 <textarea id="in21">
 function git_init() {
-  git_init_mkdir();
-  git_init_head();
+git_init_mkdir();
+git_init_head();
 }
 </textarea>
 </section>
 
+<section id="index">
+<h1>The index</h1>
+<p>When adding files with <code>git add</code>, GIT does not immediately create a commit object.
+  Instead, it adds the files to the index, which uses a binary format with lots of metadata.
+  The mock filesystem used here lacks most of these pieces of information, so thr value <code>0</code>
+  will be used for most fields. See <a href="https://mincong.io/2018/04/28/git-index/">this blog post</a>
+  for a more in-depth study of the index.</p>
+<textarea id="index-binary-utils">
+function binary(val, bytes) {
+  return from_hex(left_pad(val.toString(16), '0', bytes*2));
+}
+
+function binary16(val) { return binary(val, 2); }
+function binary32(val) { return binary(val, 4); }
+function binary64(val) { return binary(val, 8); }
+</textarea>
+
+<textarea id="make-index">
+function store_index(paths) {
+  var magic = 'DIRC' // DIRectory Cache
+  var version = binary32(2);
+  var entries = binary32(paths.length);
+  var header = magic + version + entries;
+
+  index = header;
+
+  for (var i = 0; i < paths.length; i++) {
+    var ctime  = binary64(0);
+    var mtime  = binary64(0);
+    var device = binary32(0);
+    var inode  = binary32(0);
+    // default permissions for files, in octal.
+    var mode   = binary32(0100644);
+    var uid    = binary32(0);
+    var gid    = binary32(0);
+    var size   = binary32(read(join_paths(current_directory, paths[i])).length);
+    var hash   = from_hex(hash_object(true, 'blob', false, paths[i]));
+    // for this simple index, the flags (the 4 higher bits) are 0.
+    assert(paths[i].length < 0xfff)
+    var flags_and_file_path_length = binary16(paths[i].length)
+    var file_path = paths[i] + '\0';
+    entry = ctime + mtime + device + inode + mode + uid + gid + size
+          + hash + flags_and_file_path_length + file_path;
+    while (entry.length % 8 != 0) {
+      // pad with null bytes to a multiple of 8 bytes (64-bits).
+      entry += '\0';
+    }
+
+    index += entry;
+  }
+
+  index += from_hex(sha1(index));
+
+  write(join_paths(current_directory, '.git/index'), index)
+}
+</textarea>
+</section>
+  
 <section id="playground">
 <h1>Playground</h1>
 <p>The implementation is now sufficiently complete to create a small repository.</p>
@@ -1172,12 +1284,19 @@ write('proj/src/main.scm', "(define filesystem '())\n(define current_directory \
 git_commit(['README', 'src/main.scm'], 'What an update!');
 
 git_checkout('main');
+
+// update the cache of the working directory. Without this,
+// GIT finds an empty cache, and thinks all files are scheduled
+// for deletion, until "git add ." allows it to realize that
+// the working directory matches the contents of HEAD.
+store_index(['README', 'src/main.scm']);
 </textarea>
 </section>
 
 <section id="conclusion">
 <h1>Conclusion</h1>
-<p>This article shows that the core of GIT can be re-implemented in a few lines of code.</p>
+<p>This article shows that a large part of the core of GIT can be re-implemented in <span id="loc-count">a few</span> lines of code (<a href="javascript:___copy_all_code(); void(0);">copy all the code</a>).</p>
+<div id="copy-all-code" style="display: none;"></div>
 <ul>
 
 </ul>
@@ -1351,7 +1470,34 @@ git_checkout('main');
     document.getElementById('hide-eval-' + editor_id).style.display = 'none';
     ___hilite_off();
   }
+  function ___get_all_code() {
+    var all = '';
+    for (var i = 0; i < ___global_editors.length; i++) {
+      all += ___global_editors[i].getValue();
+    }
+    return all;
+  }
+  function ___copy_all_code() {
+    var elem = document.getElementById('copy-all-code');
+    if (elem.style.display != "none") {
+      elem.style.display = "none";
+    } else {
+      elem.style.display = '';
+      var elem2 = document.createElement('textarea');
+      elem.innerHTML = '';
+      elem.appendChild(elem2);
+      var all_code = ___get_all_code();
+      elem2.value = all_code
+      elem2.focus();
+      elem2.disabled = false;
+      elem2.select();
+      elem2.setSelectionRange(0, elem2.value.length * 10); // for mobile devices?
+      document.execCommand('copy');
+      elem2.disabled = true;
+    }
+  }
   ___process_elements();
+  document.getElementById('loc-count').innerText = ___get_all_code().split('\n').length;
 </script>
 </body>
 </html>
