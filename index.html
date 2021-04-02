@@ -65,7 +65,7 @@ function read(filename) {
 }
 
 function write(filename, data) {
-  return filesystem[filename] = ""+data;
+  filesystem[filename] = String(data);
 }
 
 function exists(filename) {
@@ -73,11 +73,11 @@ function exists(filename) {
 }
 
 function mkdir(dirname) {
-  return filesystem[dirname] = null;
+  filesystem[dirname] = null;
 }
 
-function cd(d) {
-  current_directory = d;
+function cd(dirname) {
+  current_directory = dirname;
 }
 </textarea>
 </section>
@@ -105,8 +105,8 @@ function listdir(dirname) {
 <p>Our imaginary user will create a <code>proj</code> directory,
 and start filling in some files.</p>
 <textarea id="in3">
-cd('proj');
 mkdir('proj');
+cd('proj');
 write('proj/README', 'This is my Scheme project.\n');
 mkdir('proj/src');
 write('proj/src/main.scm', '(map (lambda (x) (+ x 1)) (list 1 2 3))\n');
@@ -118,7 +118,7 @@ write('proj/src/main.scm', '(map (lambda (x) (+ x 1)) (list 1 2 3))\n');
 <p>The first thing to do is to initialize the GIT directory.
 For now, only the <code>.git</code> folder is needed, The rest
 of the function implementing <code>git init</code> will be
-implemented later.</p>
+written later.</p>
 <textarea id="in4">
 function join_paths(a, b) {
   return (a == "") ? b : (a + "/" + b);
@@ -133,12 +133,11 @@ git_init_mkdir();
 </section>
 
 <section id="git-hash-object">
-<h1><code>git hash-object</code><span class="notoc" (storing a copy of a file in <code>.git</code>)</span></h1>
+<h1><code>git hash-object</code><span class="notoc"> (storing a copy of a file in <code>.git</code>)</span></h1>
 <p>The most basic element of a GIT repository is an object. It is a
 copy of a file that is stored in GIT&apos;s database. That copy is
 stored under a unique name. The unique name is obtained by hashing the
-contents of the file. <!-- or have a hash oracle that always returns a
-new number. --></p>
+contents of the file.</p>
 <textarea id="in5">
 function hash_object(must_write, type, is_data, path_or_data) {
   var data = is_data ? path_or_data : read(current_directory + "/" + path_or_data);
@@ -368,6 +367,60 @@ initial_commit = store_commit(
 </section>
 </section>
 
+<section id="resolving-references">
+<h1>resolving references</h1>
+<textarea>
+function trim_newline(s) {
+  if (s.endsWith('\n')) { return s.substr(0, s.length-1); } else { return s; }
+}
+</textarea>
+
+<section id="git-symbolic-ref">
+<h1><code>git symbolic-ref</code></h1>
+<textarea>
+function git_symbolic_ref(ref) {
+  var ref_file = join_paths(current_directory, '.git/' + ref);
+  if (exists(ref_file) && read(ref_file).startsWith('ref: ')) {
+    return trim_newline(read(ref_file)).substr('ref: '.length);
+  } else {
+    return false;
+  }
+}
+</textarea>
+</section>
+  
+<section id="git-rev-parse">
+<h1><code>git rev-parse</code></h1>  
+<textarea>
+function git_rev_parse(ref) {
+  var symbolic_ref_target = git_symbolic_ref(ref);
+  if (symbolic_ref_target) {
+    // symbolic ref like "ref: refs/heads/main"
+    return git_rev_parse(symbolic_ref_target);
+  } else if (/[0-9a-f]{40}/.test(ref)) {
+    // hash like "0123456789abcdef0123456789abcdef01234567"
+    return ref;
+  } else if (ref == 'HEAD') {
+    // user-friendly reference like "HEAD"
+    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/' + ref))));
+  } else if (ref.startsWith('refs/') && exists(join_paths(current_directory, '.git/' + ref))) {
+    // user-friendly reference like "refs/heads/main"
+    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/' + ref))));
+  } else if (exists(join_paths(current_directory, '.git/refs/heads/' + ref))) {
+    // user-friendly reference like "main" (a branch)
+    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/refs/heads/' + ref))));
+  } else if (exists(join_paths(current_directory, '.git/refs/tags/' + ref))) {
+    // user-friendly reference like "v1.0" (a branch)
+    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/refs/tags/' + ref))));
+  } else {
+    // unknown ref
+    return false;
+  }
+}
+</textarea>
+</section>
+</section>
+
 <section id="git-branch">
 <h1><code>git branch</code></h1>
 <p>A branch is a pointer to a commit, stored in a file in <code>.git/refs/heads/name_of_the_branch</code>.
@@ -453,48 +506,6 @@ function advance_head(new_commit_hash) {
     // Detached HEAD, update .git/HEAD directly.
     write(join_paths(current_directory, '.git/HEAD'), new_commit_hash + '\n');
   }
-}
-</textarea>
-<textarea>
-function git_rev_parse(ref) {
-  var symbolic_ref_target = git_symbolic_ref(ref);
-  if (symbolic_ref_target) {
-    // symbolic ref like "ref: refs/heads/main"
-    return git_rev_parse(symbolic_ref_target);
-  } else if (/[0-9a-f]{40}/.test(ref)) {
-    // hash like "0123456789abcdef0123456789abcdef01234567"
-    return ref;
-  } else if (ref == 'HEAD') {
-    // user-friendly reference like "HEAD"
-    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/' + ref))));
-  } else if (ref.startsWith('refs/') && exists(join_paths(current_directory, '.git/' + ref))) {
-    // user-friendly reference like "refs/heads/main"
-    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/' + ref))));
-  } else if (exists(join_paths(current_directory, '.git/refs/heads/' + ref))) {
-    // user-friendly reference like "main" (a branch)
-    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/refs/heads/' + ref))));
-  } else if (exists(join_paths(current_directory, '.git/refs/tags/' + ref))) {
-    // user-friendly reference like "v1.0" (a branch)
-    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/refs/tags/' + ref))));
-  } else {
-    // unknown ref
-    return false;
-  }
-}
-</textarea>
-<textarea>
-function git_symbolic_ref(ref) {
-  var ref_file = join_paths(current_directory, '.git/' + ref);
-  if (exists(ref_file) && read(ref_file).startsWith('ref: ')) {
-    return trim_newline(read(ref_file)).substr('ref: '.length);
-  } else {
-    return false;
-  }
-}
-</textarea>
-<textarea>
-function trim_newline(s) {
-  if (s.endsWith('\n')) { return s.substr(0, s.length-1); } else { return s; }
 }
 </textarea>
 <textarea>
@@ -804,8 +815,8 @@ current_directory = '';
 </textarea>
 
 <textarea id="playground-play">
-cd('proj');
 mkdir('proj');
+cd('proj');
 write('proj/README', 'This is my implementation of GIT.\n');
 mkdir('proj/src');
 write('proj/src/main.scm', "(define filesystem '())\n...\n");

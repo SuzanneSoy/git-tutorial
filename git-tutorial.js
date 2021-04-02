@@ -361,7 +361,7 @@ function ___filesystem_to_string(fs) {
     + '<textarea id="elem-'+id+'" disabled="disabled" style="display:none">'
     + ___specialchars(___filesystem_to_printf(fs) || 'echo "Empty filesystem."')
     + '</textarea>'
-    + "<table>" + entries.join('') + "</table></div>";
+    + "<table><thead><tr><th>Path</th><th>Contents</th></tr></thead><tbody>" + entries.join('') + "</tbody></table></div>";
 }
 function ___textarea_value(elem) {
   if (elem.getValue) {

@@ -12,14 +12,14 @@ article#git-tutorial { max-width: 63rem; position: absolute; right:18.4em; top:0
 
 @media (max-width: 72em) {
     #git-tutorial td.cell-contents { width: 34em; }
-    #git-tutorial article { right: 7em; }
+    article#git-tutorial { right: 7em; }
     #git-tutorial #toc { right: -11em; }
     #git-tutorial #toc:hover { border-left: 5px solid gray; }
 }
 
 @media (max-width: 63em) {
     #git-tutorial td.cell-contents { width: 30em; }
-    #git-tutorial article { right:6em; }
+    article#git-tutorial { right:6em; }
     #git-tutorial #toc { right: -12em; }
     #git-tutorial #toc:hover { border-left: 5px solid gray; }
 }
@@ -27,7 +27,7 @@ article#git-tutorial { max-width: 63rem; position: absolute; right:18.4em; top:0
 #git-tutorial textarea { display:block; height: 18rem; }
 #git-tutorial .CodeMirror { height: max-content; }
 #git-tutorial input { display: inline-block; margin-right: 1em; font-size: 1.2rem; }
-#git-tutorial table, #git-tutorial td { border:thin solid black; border-collapse: collapse; }
+#git-tutorial table, #git-tutorial td, #git-tutorial th { border:thin solid black; border-collapse: collapse; }
 #git-tutorial .specialchar { color: red; word-wrap: normal; }
 #git-tutorial .hex-prefix { color: lightgrey; }
 #git-tutorial .hex { color: brown; }
@@ -43,7 +43,7 @@ article#git-tutorial { max-width: 63rem; position: absolute; right:18.4em; top:0
 #git-tutorial .error { color: orangered; }
 #git-tutorial .newline:after { content: ''; display:inline-block; width:100%; height:0; }
 #git-tutorial code { word-wrap: break-word; }
-#git-tutorial article .onlytoc { display: none; }
+article#git-tutorial .onlytoc { display: none; }
 /* #toc .onlytoc { } */
 #git-tutorial #toc .tocsmall { font-size: smaller; }
 #git-tutorial #toc .notoc { display: none; }
