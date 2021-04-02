@@ -1,19 +1,49 @@
 <html>
   <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title></title>
+<title>GIT tutorial</title>
+<link rel="stylesheet" href="codemirror-5.60.0/lib/codemirror.css">
+<script src="codemirror-5.60.0/lib/codemirror.js"></script>
+<script src="codemirror-5.60.0/mode/javascript/javascript.js"></script>
+<script src="sha1.js"></script>
+<script src="pako.min.js"></script>
 <style>
-body { width: 63rem; font-size: 1.2rem; text-align:justify; }
-textarea { display:block; width: 63rem; height: 18rem; font-size: 1.2rem; }
-input { display:block; font-size: 1.2rem; }
-table, td { border:thin solid black; border-collapse: collapse; font-size: 1.2rem; }
-td.cell-path { max-width: 26rem; }
-td.cell-contents { max-width: 36rem; }
-.specialchar { color: red; }
+body { font-size: 1.2rem; text-align:justify; }
+article { max-width: 63rem; position: absolute; right:18.4em; top:0; left:0.5em; transition: right, 0.2s; }
+#toc { position: fixed; top: 0; bottom: 0; right:0; width: 17.4em; text-align: left; overflow: scroll; background: white;
+       border: 1px solid gray; transition: border-width 0.2s, right 0.2s; z-index: 1000; }
+#toc:hover { right: 0; transition: border-width 0.4s, right 0.4s; z-index: 3000; }
+#lines { position: absolute; z-index: 2000; }
+textarea, .CodeMirror { width: 100%; font-size: 1.2rem; border: thin solid black; }
+table { table-layout: fixed; width: 100%; font-size: 100%; font-family: monospace; min-width: 41em; }
+
+/* td.cell-path { } */
+td.cell-contents { font-family: monospace; width: 36em; }
+
+@media (max-width: 72em) {
+  td.cell-contents { width: 34em; }
+  article { right: 7em; }
+  #toc { right: -11em; }
+  #toc:hover { border-left: 5px solid gray; }
+}
+
+@media (max-width: 63em) {
+  td.cell-contents { width: 30em; }
+  article { right:6em; }
+  #toc { right: -12em; }
+  #toc:hover { border-left: 5px solid gray; }
+}
+
+textarea { display:block; height: 18rem; }
+.CodeMirror { height: max-content; }
+input { display: inline-block; margin-right: 1em; font-size: 1.2rem; }
+table, td { border:thin solid black; border-collapse: collapse; }
+.specialchar { color: red; word-wrap: normal; }
 .hex-prefix { color: lightgrey; }
 .hex { color: brown; }
 .hex-hash { display: block; width: max-content; }
 .hex-hash, .plain-hash-or-ref { border: thin solid brown; }
+.plain-hash-or-ref { display: inline-block; margin: 0.5px 0; }
 .hex-hash.hilite-src, .plain-hash-or-ref.hilite-src { background: lightyellow; border-color: red; }
 .object-hash.hilite-dest { background: lightyellow; border-color: red; }
 .object-hash { border: thin solid transparent; }
@@ -28,13 +58,36 @@ td.cell-contents { max-width: 36rem; }
   height:0;
 }
 code { word-wrap: break-word; }
+article .onlytoc { display: none; }
+/* #toc .onlytoc { } */
+#toc .tocsmall { font-size: smaller; }
+#toc .notoc { display: none; }
+h1 { display: inline-block; }
+h1 + p { clear: both; }
+.permalink { opacity: 0.5; clear: both; padding: 1.2em 1.2em 0 0.5em; font-size: small; text-decoration: none; color: gray; }
+h1:hover + .permalink, .permalink:hover { opacity: 1; }
+#toc ul { list-style-type: none; padding: 0 !important; /*list-style-type: disc;*/ }
+#toc a { color: #666; }
+#toc a:hover { color: #333; }
+.CodeMirror .scrolled-to-line { background: lightcyan; }
+#toc > ol { padding-left: 0.7em; }
+#toc ol > li > a { text-decoration: none; }
+#toc li { padding-top: 0.4em; }
+#toc ol, #toc ul { padding-left: 2.3em; }
 </style>
 </head>
 <body>
-<a href="https://git-scm.com/book/en/v2/Git-Internals-Git-Objects">git-book</a>
 
-<script src="sha1.js"></script>
-<script src="pako.min.js"></script>
+<article>
+<p>The main reference for this tutorial is the <a href="https://git-scm.com/book/en/v2/Git-Internals-Git-Objects">Pro Git book</a> section on GIT internals.</p>
+
+<p>This tutorial uses three libraries:</p>
+<ul>
+  <li><a href="https://codemirror.net/">CodeMirror</a>, released under the MIT license</li>
+  <li><a href="https://www.movable-type.co.uk/scripts/sha1.html">sha1.js</a>, released under the MIT license</li>
+  <li><a href="https://github.com/nodeca/pako">pako 2.0.3</a>, released under the MIT and Zlib licenses, see the project page for details.</li>
+</ul>
+
 
 <script>
   function ___stringToUint8Array(s) {
@@ -52,11 +105,21 @@ code { word-wrap: break-word; }
     }
     return s.join('');
   }
-  sha1 = Sha1.hash;
-  deflate = function(s) { return ___uint8ArrayToString(pako.deflate(___stringToUint8Array(s))); }
-  inflate = function(s) { return ___uint8ArrayToString(pako.deflate(___stringToUint8Array(s))); }
+  function ___to_hex(s) {
+    var s = String(s);
+    var hex = ""
+    for (var i = 0; i < s.length; i++) {
+      hex += ___left_pad(s.charCodeAt(i).toString(16), '0', 2);
+    }
+    return hex;
+  }
 
-  var global_element_id = 0
+  // These three functions are accessible in the user scripts.
+  sha1 = function(s) { return Sha1.hash(___to_hex(s), { msgFormat: 'hex-bytes', outFormat: 'hex' }); };
+  deflate = function(s) { return ___uint8ArrayToString(pako.deflate(___stringToUint8Array(s))); }
+  inflate = function(s) { return ___uint8ArrayToString(pako.inflate(___stringToUint8Array(s))); }
+
+  var ___global_unique_id = 0
   function ___specialchars(str) {
     return String(str)
       .replace(/&/g, '&amp;')
@@ -78,18 +141,11 @@ code { word-wrap: break-word; }
     }
     return '<span style="display: block;">' + hex + '</span>';
   }
-  function ___to_hex(s) {
-    var s = String(s);
-    var hex = ""
-    for (var i = 0; i < s.length; i++) {
-      hex += ___left_pad(s.charCodeAt(i).toString(16), '0', 2);
-    }
-    return hex;
-  }
   function ___specialchars_and_colour(s) {
-    return s.replace(/[^-a-zA-Z0-9+_/!%$@.():]/g, function (c) {
+    return s.replace(/[^-a-zA-Z0-9+_/!%$@.()':]/g, function (c) {
           switch (c) {
             case " ":  return '<span class="space"> </span>'; break;
+            case "\\": return '<span class="specialchar">\\\\</span>'; break;
             case "\0": return '<span class="specialchar newline">\\000</span>'; break;
             case "\r": return '<span class="specialchar">\\r</span>'; break;
             case "\n": return '<span class="specialchar newline">\\n</span>'; break;
@@ -98,13 +154,14 @@ code { word-wrap: break-word; }
             case '<':  return '&lt;'; break;
             case '>':  return '&gt;'; break;
             case '"':  return '&quot;'; break;
+            case "'":  return '&#39;'; break;
             default:   return '<span class="specialchar">\\x'+___left_pad(c.charCodeAt(0).toString(16), 0, 2)+'</span>'; break;
           }
         });
   }
-  function getOffset(elt) {
+  function ___getOffset(elt) {
     if (elt) {
-        var o = getOffset(elt.offsetParent);
+        var o = ___getOffset(elt.offsetParent);
         return { left: elt.offsetLeft + o.left, top: elt.offsetTop + o.top };
     } else {
         return { left: 0, top: 0 };
@@ -135,10 +192,10 @@ code { word-wrap: break-word; }
     lines.innerHTML = '';
     for (var d = 0; d < dests.length; d++) {
       dests[d].classList.add('hilite-dest');
-      var osrc = getOffset(src);
+      var osrc = ___getOffset(src);
       var tr = dests[d];
       while (tr !== null && tr.tagName.toLowerCase() != 'tr') { tr = tr.parentElement; }
-      var otr = getOffset(tr);
+      var otr = ___getOffset(tr);
 
       var l1 = document.createElement('div');
       lines.appendChild(l1);
@@ -152,7 +209,7 @@ code { word-wrap: break-word; }
       lines.appendChild(l3);
       l3.style.position = 'absolute';
 
-      var op = getOffset(l1.offsetParent);
+      var op = ___getOffset(l1.offsetParent);
 
       var xa = Math.floor(osrc.left - op.left + src.offsetWidth);
       var ya = Math.floor(osrc.top  - op.top  + src.offsetHeight / 2);
@@ -203,7 +260,7 @@ code { word-wrap: break-word; }
       sp[0] = ___specialchars_and_colour(sp[0]);
       sp[1] = ___specialchars_and_colour(sp[1]);
       for (i = 2; i < sp.length; i++) {
-        var id=global_element_id++;
+        var id=___global_unique_id++;
         var hash = "object-hash-"+___to_hex(sp[i].substr(0,20));
         sp[i] = '<span id="'+id+'" class="hex-hash" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
               + ___to_hex_for_printf(sp[i].substr(0,10))
@@ -212,31 +269,34 @@ code { word-wrap: break-word; }
               + ___specialchars_and_colour(sp[i].substr(20));
       }
       return sp.join('<span class="specialchar newline">\\000</span>');
-    } else if (/^[0-9a-f]{40}$/.test(s)) {
-      var id=global_element_id++;
-      var hash = "object-hash-"+s;
-      return '<span id="'+id+'" class="hex-hash" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
-              + s
-              + '</span>';
-    } else if (/^ref: refs\/[^\n]*$/.test(s)) {
-      var id=global_element_id++;
-      var hash = "object-hash-"+s.substr(5);
+    } else if (/^[0-9a-f]{40}\n$/.test(s)) {
+      var id=___global_unique_id++;
+      var hash = "object-hash-"+s.substr(0,40);
+      return '<span id="'+id+'" class="plain-hash-or-ref" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
+              + s.substr(0,40)
+              + '</span>'
+              + ___specialchars_and_colour(s.substr(40));
+    } else if (/^ref: refs\/[^\n]*\n$/.test(s)) {
+      var id=___global_unique_id++;
+      var hash = "object-hash-"+s.substr(5, s.length-6);
       return s.substr(0,5)
              + '<span id="'+id+'" class="plain-hash-or-ref" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
-             + s.substr(5)
-             + '</span>';
+             + ___specialchars_and_colour(s.substr(5, s.length-6))
+             + '</span>'
+             + ___specialchars_and_colour(s.substr(s.length-1));
     } else if(s.substr(0,7) == "commit ") {
       var sz = s.split('\0');
       var sp = sz[1].split('\n');
       sz[0] = ___specialchars_and_colour(sz[0]);
       var i;
       for (i = 0; i < sp.length && sp[i] != ''; i++) {
-        if (/tree [0-9a-f]{40}/.test(sp[i])) {
-          var id=global_element_id++;
-          var hash = "object-hash-"+sp[i].substr(5);
-          sp[i] = ___specialchars_and_colour(sp[i].substr(0,5))
+        if (/(tree|parent) [0-9a-f]{40}/.test(sp[i])) {
+          var prefix_len = sp[i].startsWith('tree ') ? 5 : 7;
+          var id=___global_unique_id++;
+          var hash = "object-hash-"+sp[i].substr(prefix_len);
+          sp[i] = ___specialchars_and_colour(sp[i].substr(0,prefix_len))
                 + '<span id="'+id+'" class="plain-hash-or-ref" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
-                + sp[i].substr(5)
+                + sp[i].substr(prefix_len)
                 + '</span>';
         } else {
           sp[i] = ___specialchars_and_colour(sp[i]);
@@ -258,7 +318,7 @@ code { word-wrap: break-word; }
       var inflated = false;
     }
     if (inflated) {
-      var id=global_element_id++;
+      var id=___global_unique_id++;
       return '<span onClick="___deflated_click('+id+')">'
         + '<span id="deflated'+id+'-pretty">'
         + '<span class="deflated">deflated:</span>'
@@ -291,11 +351,12 @@ code { word-wrap: break-word; }
     return entries.join(' ');
   }
   function ___deflated_click(id) {
+    ___hilite_off();
     if (document.getElementById('deflated'+id+'-pretty').style.display != "none") {
       document.getElementById('deflated'+id+'-pretty').style.display = "none";
-      document.getElementById('deflated'+id+'-raw').style.display = "inherit";
+      document.getElementById('deflated'+id+'-raw').style.display = '';
     } else {
-      document.getElementById('deflated'+id+'-pretty').style.display = "inherit";
+      document.getElementById('deflated'+id+'-pretty').style.display = '';
       document.getElementById('deflated'+id+'-raw').style.display = "none";
     }
   }
@@ -329,7 +390,7 @@ code { word-wrap: break-word; }
     var entries = Object.entries(fs)
       .sort((a,b) => a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0))
       .map(___format_entry);
-    var id = global_element_id++;
+    var id = ___global_unique_id++;
     return '<div class="hilite-wrapper">Filesystem contents: ' + entries.length + " files and directories. "
       + '<a href="javascript: ___copyprintf_click(\'elem-'+id+'\');">'
       + "Copy commands to recreate in *nix terminal"
@@ -340,12 +401,20 @@ code { word-wrap: break-word; }
       + '</textarea>'
       + "<table>" + entries.join('') + "</table></div>";
   }
+  function ___textarea_value(elem) {
+    if (elem.getValue) {
+      return elem.getValue();
+    } else {
+      return elem.value;
+    }
+  }
   function ___copyprintf_click(id) {
+    ___hilite_off();
     var elem = document.getElementById(id);
     if (elem.style.display != "none") {
       elem.style.display = "none";
     } else {
-      elem.style.display = "inherit";
+      elem.style.display = '';
       elem.focus();
       elem.disabled = false;
       elem.select();
@@ -356,11 +425,12 @@ code { word-wrap: break-word; }
   }
   var global_filesystem=false;
   function ___git_eval(current) {
+    document.getElementById('hide-eval-' + current).style.display = '';
     var script = '';
     for (i = 0; i <= current; i++) {
-      script += document.getElementById('in' + i).value;
+      script += ___textarea_value(___global_editors[i]);
     }
-    script += "document.getElementById('out' + current).innerHTML = ___filesystem_to_string(filesystem); filesystem;";
+    script += "\n document.getElementById('out' + current).innerHTML = ___filesystem_to_string(filesystem); filesystem;";
     try {
       global_filesystem = eval(script);
     } catch (e) {
@@ -372,27 +442,36 @@ code { word-wrap: break-word; }
 
 <div id="lines"></div>
 
-<h2>Introduction</h2>
+<section id="introduction">
+<h1>Introduction</h1>
 <p>
 GIT is based on a simple model, with a lot of shorthands for common
 use cases. This model is sometimes hard to guess just from the
 everyday commands. To illustrate how GIT works, we'll implement a
 stripped down clone of GIT in a few lines of JavaScript.
 </p>
+</section>
 
-<h2>The Operating System's filesystem</h2>
+<section id="os-filesystem">
+<h1>The Operating System's filesystem</h1>
+
+<section id="os-filesystem-model">
+<h1>Model of the filesystem</h1>
 <p>We will simulate the Operating System's filesystem with a very
 simple key-value store. In this very simple filesystem, directories
 are entries mapped to <code>null</code> and files are entries mapped
-to strings.</p>
+to strings. The path to the current directory is stored in a separate
+variable.</p>
 <textarea id="in0">
 var filesystem = {};
+var current_directory = '';
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(0)">
-<div id="out0"></div>
+</section>
 
+<section id="os-filesystem-functions">
+<h1>Filesystem access functions<span class="notoc"> (<code>read</code>, <code>write</code>, <code>mkdir</code>, <code>exists</code>, <code>cd</code>)</span></h1>
 <p>The filesystem exposes functions to read an entire file, create or
-replace an entire file, and create a directory.</p>
+  replace an entire file, create a directory, test the existence of a filesystem entry, and change the current directory.</p>
 <textarea id="in1">
 function read(filename) {
   return filesystem[filename];
@@ -402,22 +481,22 @@ function write(filename, data) {
   return filesystem[filename] = ""+data;
 }
 
-function mkdir(dirname) {
-  return filesystem[dirname] = null;
-}
-
 function exists(filename) {
   return typeof(filesystem[filename]) !== 'undefined';
 }
 
-current_directory = '';
+function mkdir(dirname) {
+  return filesystem[dirname] = null;
+}
+
 function cd(d) {
   current_directory = d;
 }
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(1)">
-<div id="out1"></div>
+</section>
 
+<section id="os-filesystem-listdir">
+<h1>Filesystem access functions<span class="notoc"> (<code>listdir</code>)</span></h1></h1>
 <p>It will be handy for some operations to list the contents of a
 directory.</p>
 <textarea id="in2">
@@ -431,10 +510,11 @@ function listdir(dirname) {
   return Array.from(new Set(children));
 }
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(2)">
-<div id="out2"></div>
+</section>
+</section>
 
-<h2>Example working directory</h2>
+<section id="example-working-directory">
+<h1>Example working directory</h1>
 <p>Our imaginary user will create a <code>proj</code> directory,
 and start filling in some files.</p>
 <textarea id="in3">
@@ -444,10 +524,10 @@ write('proj/README', 'This is my Scheme project.\n');
 mkdir('proj/src');
 write('proj/src/main.scm', '(map (lambda (x) (+ x 1)) (list 1 2 3))\n');
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(3)">
-<div id="out3"></div>
+</section>
 
-<h2><code>git init</code> (creating <code>.git</code>)</h2>
+<section id="git-init">
+<h1><code>git init</code> (creating <code>.git</code>)</h1>
 <p>The first thing to do is to initialize the GIT directory.
 For now, only the <code>.git</code> folder is needed, The rest
 of the function implementing <code>git init</code> will be
@@ -463,10 +543,10 @@ function git_init_mkdir() {
 
 git_init_mkdir();
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(4)">
-<div id="out4"></div>
+</section>
 
-<h2><code>git hash-object</code> (storing a copy of a file in <code>.git</code>)</h2>
+<section id="git-hash-object">
+<h1><code>git hash-object</code><span class="notoc" (storing a copy of a file in <code>.git</code>)</span></h1>
 <p>The most basic element of a GIT repository is an object. It is a
 copy of a file that is stored in GIT&apos;s database. That copy is
 stored under a unique name. The unique name is obtained by hashing the
@@ -490,9 +570,9 @@ function hash_object(must_write, type, is_data, path_or_data) {
   return hash;
 }
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(5)">
-<div id="out5"></div>
 
+<section id="add-file-to-git">
+<h1>Adding a file to the GIT database</h1>
 <p>So far, our GIT database does not know about any of the user&apos;s
 files. In order to add the contents of the <code>README</code> file in
 the database, we use <code>git hash-object -w -t blob README</code>,
@@ -503,14 +583,12 @@ a <em>blob</em> object, i.e. the contents of a file.</p>
 // git hash-object -w -t blob README
 hash_object(true, 'blob', false, 'README');
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(6)">
 <p>The objects stored in the GIT database are compressed with zlib
 (using the "deflate" compression method). The filesystem view shows
 the <span class="deflated">deflated:</span> followed by the uncompressed
 data. Click on the file contents to toggle between this pretty-printed
 view and the raw compressed data.
 </p>
-<div id="out6"></div>
 
 <p>You will notice that the database does not contain the name of the
 file, only its contents, stored under a unique identifier which is
@@ -520,10 +598,11 @@ to the database.</p>
 // git hash-object -w -t blob src/main.scm
 hash_object(true, 'blob', false, 'src/main.scm');
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(7)">
-<div id="out7"></div>
+</section>
+</section>
 
-<h2><code>zlib</code> compression</h2>
+<section id="zlib-compression-note">
+<h1><code>zlib</code> compression</h1>
 <p>The real implementation of GIT compresses objects with zlib. To
 view a zlib-compressed object in your terminal, simply write this
 declaration in your shell, and then call e.g. <code>unzlib
@@ -537,8 +616,10 @@ unzlib() {
     "$1"
 }
 </pre>
+</section>
 
-<h2>Storing trees (list of hashed files and subtrees)</h2>
+<section id="storing-trees">
+<h1>Storing trees (list of hashed files and subtrees)</h1>
 <p>Now GIT knows about the contents of both of the user's
 files, but it would be nice to also store the filenames.
 This is done by creating a <em>tree</em> object</p>
@@ -566,10 +647,8 @@ function store_tree(base_directory, filenames, subtrees) {
   return hash_object(true, 'tree', true, tree_contents);
 }
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(8)">
-<div id="out8"></div>
 
-This function needs a small utility to convert hashes encoded in hexadecimal to a binary form.
+<p>This function needs a small utility to convert hashes encoded in hexadecimal to a binary form.</p>
 <textarea id="in9">
   function from_hex(hex) {
     var hex = String(hex);
@@ -580,20 +659,21 @@ This function needs a small utility to convert hashes encoded in hexadecimal to 
     return str;
   }
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(9)">
-<div id="out9"></div>
 
+<section id="store-tree-example">
+<h1>Example use of store_tree</h1>
 <textarea id="in10">
-//hash_src_tree = store_tree("src/", ["main.scm"], []);
-//                store_tree("",     ["README"],   [{name:"src", hash:hash_src_tree}]);
+//hash_src_tree  = store_tree("src/", ["main.scm"], []);
+//hash_root_tree = store_tree("",     ["README"],   [{name:"src", hash:hash_src_tree}]);
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(10)">
-<div id="out10"></div>
+</section>
 
-Making trees out of the subfolders one by one is cumbersome. Here's a utility function which takes a list of paths, and builds a tree from those.
+<section id="store-tree-from-paths">
+<h1>Storing a tree from a list of paths</h1>
+<p>Making trees out of the subfolders one by one is cumbersome. Here's a utility function which takes a list of paths, and builds a tree from those.</p>
 
 <textarea id="in11">
-function store_tree_from_paths(paths) {
+function paths_to_tree(paths) {
   var hierarchy = { subfolders: {}, files: [] };
   for (var i = 0; i < paths.length; i++) {
     var path_components = paths[i].split('/');
@@ -620,24 +700,32 @@ function store_tree_from_paths(paths) {
 }
 
 // git add README src/main.scm
-store_tree_from_paths(["README", "src/main.scm"]);
+paths_to_tree(["README", "src/main.scm"]);
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(11)">
-<div id="out11"></div>
-  
+</section>
+</section>
+
+<section id="store-commit">
+<h1>Storing a commit in the GIT database</h1>
 <p>Now that the GIT database contains the entire tree for the current version,
-a commit can be created. A commit contains
+a commit can be created. A commit contains</p>
 <ul>
   <li>a pointer to the tree</li>
-  <li>a pointer to the previous ("parent") commit (or to multiple parent commits merging them)</li>
+  <li>a pointer to the previous ("parent") commit (or to multiple parent commits merging them, or no parents for the initial commit)</li>
   <li>information about the author (the person who initially wrote the code)</li>
   <li>information about the committer (the person who adds the code to the GIT
     database, often the same person as the author, but it can be a different person
     e.g. when someone else makes changes to the history or applies a patch recieved
     by e-mail)</li>
   <li>a description</li>
-</ul> 
-</p>
+</ul>
+<p>The author and committer information contain</p>
+<ul>
+  <li>the person's name</li>
+  <li>the person's email</li>
+  <li>the *nix timestamp at which the version was authored or committed</li>
+  <li>the <a href="https://www.youtube.com/watch?v=q2nNzNo_Xps">timezone for that timestamp</a></li>
+</ul>
 <textarea id="in12">
 function store_commit(tree, parents, author, committer, message) {
   var commit_contents = '';
@@ -672,30 +760,32 @@ function format_timezone(tm) {
   return (tm >= 0 ? '+' : '-') + left_pad(h, '0', 2) + left_pad(m, '0', 2);
 }
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(12)">
-<div id="out12"></div>
 
+<section id="store-commit-example">
+<h1>Storing an example commit</h1>
 <p>It is now possible to store a commit in the database. This saves
   a copy of the tree along with some metadata about this version.
   The first commit has no parent, which is represented by passing
   the empty list.</p>
 <textarea id="in13">
 initial_commit = store_commit(
-  store_tree_from_paths(["README", "src/main.scm"]),
+  paths_to_tree(["README", "src/main.scm"]),
   [],
-  {name:'Example User', email:'user@example.com', date:new Date(1617120803000), timezoneMinutes: +60},
-  {name:'Example User', email:'user@example.com', date:new Date(1617120803000), timezoneMinutes: +60},
+  {name:'Ada Lovelace', email:'ada@analyti.cal', date:new Date(1617120803000), timezoneMinutes: +60},
+  {name:'Ada Lovelace', email:'ada@analyti.cal', date:new Date(1617120803000), timezoneMinutes: +60},
   'Initial commit');
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(13)">
-<div id="out13"></div>
+</section>
+</section>
 
-<h2>Branches</h2>
+<section id="git-branch">
+<h1><code>git branch</code></h1>
 <p>A branch is a pointer to a commit, stored in a file in <code>.git/refs/heads/name_of_the_branch</code>.
   The branch can be overwritten with <code>git branch -f</code>. Also, as will be explained later,
   <code>git commit</code> can update the pointer of a branch.</p>
 <textarea id="in14">
-function git_branch(branch_name, commit_hash, force) {
+function git_branch(branch_name, commit_ref, force) {
+  var commit_hash = git_rev_parse(commit_ref);
   mkdir(join_paths(current_directory, '.git/refs'));
   mkdir(join_paths(current_directory, '.git/refs/heads'));
   if (!force && exists(join_paths(current_directory, '.git/refs/heads/' + branch_name))) {
@@ -713,10 +803,10 @@ git_branch('main', initial_commit, false);
 // git branch -f main 0123456789012345678901234567890123456789
 git_branch('main', initial_commit, true);
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(14)">
-<div id="out14"></div>
+</section>
 
-<h2><code>HEAD</code></h2>
+<section id="HEAD">
+<h1><code>HEAD</code></h1>
 <p>
   The HEAD indicates the "current" commit. It is set at first as part of the <code>git init</code> routine.
 </p>
@@ -727,32 +817,44 @@ function git_init_head() {
 
 git_init_head();
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(15)">
-<div id="out15"></div>
+</section>
 
-<h2><code>git commit</code></h2>
+<section id="git-commit">
+<h1><code>git commit</code></h1>
 <p>If the <code>HEAD</code> points to a commit hash, then <code>git commit</code> updates the <code>HEAD</code> to point to the new commit.
   Otherwise, when the <code>HEAD</code> points to a branch, then the target branch (represented by a file named <code>.git/refs/heads/the_branch_name</code>) is updated.</p>
 <textarea id="in16">
-gitconfig = {
+var gitconfig = {
   user: {
-    name: 'Example User',
-    email: 'user@example.com',
+    name: 'Ada Lovelace',
+    email: 'ada@analyti.cal',
   }
-}
-
+};
+var $EDITOR = function() { return window.prompt('Commit message:'); }
+</textarea>
+<textarea>
 function git_commit(file_paths, message) {
   var now = new Date();
   var timestamp = (+now)/1000;
   var timezoneMinutes = -(now.getTimezoneOffset());
   
-  var new_commit_hash = store_commit(
-    store_tree_from_paths(file_paths),
-    [git_rev_parse('HEAD')],
-    {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
-    {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
-    message || editor());
+  var parent = git_rev_parse('HEAD');
+  var parents = parent ? [parent] : []
 
+  var new_commit_hash = store_commit(
+    paths_to_tree(file_paths),
+    parents,
+    {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
+    {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
+    message || $EDITOR());
+
+  advance_head(new_commit_hash);
+
+  return new_commit_hash;
+}
+</textarea>
+<textarea>
+function advance_head(new_commit_hash) {
   var referenced_branch = git_symbolic_ref('HEAD');
   if (referenced_branch) {
     // Update the target of the ref:
@@ -761,134 +863,495 @@ function git_commit(file_paths, message) {
     // Detached HEAD, update .git/HEAD directly.
     write(join_paths(current_directory, '.git/HEAD'), new_commit_hash + '\n');
   }
-  return new_commit_hash;
 }
-
+</textarea>
+<textarea>
 function git_rev_parse(ref) {
-  var referenced_branch = git_symbolic_ref(ref);
-  if (referenced_branch) {
-    return git_rev_parse(symbolic_ref_target));
+  var symbolic_ref_target = git_symbolic_ref(ref);
+  if (symbolic_ref_target) {
+    // symbolic ref like "ref: refs/heads/main"
+    return git_rev_parse(symbolic_ref_target);
   } else if (/[0-9a-f]{40}/.test(ref)) {
+    // hash like "0123456789abcdef0123456789abcdef01234567"
     return ref;
-  } else if (ref == 'HEAD' || ref.startsWith('refs/')) {
+  } else if (ref == 'HEAD') {
+    // user-friendly reference like "HEAD"
     return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/' + ref))));
+  } else if (ref.startsWith('refs/') && exists(join_paths(current_directory, '.git/' + ref))) {
+    // user-friendly reference like "refs/heads/main"
+    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/' + ref))));
+  } else if (exists(join_paths(current_directory, '.git/refs/heads/' + ref))) {
+    // user-friendly reference like "main" (a branch)
+    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/refs/heads/' + ref))));
+  } else if (exists(join_paths(current_directory, '.git/refs/tags/' + ref))) {
+    // user-friendly reference like "v1.0" (a branch)
+    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/refs/tags/' + ref))));
   } else {
-    alert('unknown ref');
+    // unknown ref
     return false;
   }
 }
-
+</textarea>
+<textarea>
 function git_symbolic_ref(ref) {
   var ref_file = join_paths(current_directory, '.git/' + ref);
-  if (read(ref_file).startsWith('ref: ')) {
-    return trim_newline(read(head_file)).substr('ref: '.length);
+  if (exists(ref_file) && read(ref_file).startsWith('ref: ')) {
+    return trim_newline(read(ref_file)).substr('ref: '.length);
   } else {
     return false;
   }
 }
-
+</textarea>
+<textarea>
 function trim_newline(s) {
   if (s.endsWith('\n')) { return s.substr(0, s.length-1); } else { return s; }
 }
-
-var editor = function() { return window.prompt('Commit message:'); }
-
-write('README', 'This is my Scheme project -- with updates!');
-var second_commit = git_commit(['README', 'src/main.scm']);
 </textarea>
-<input type="button" value="eval" onClick="___git_eval(16)">
-<div id="out16"></div>
+<textarea>
+write('proj/README', 'This is my Scheme project -- with updates!');
+var second_commit = git_commit(['README', 'src/main.scm'], 'Some updates');
+</textarea>
+</section>
 
-<h2>Tags</h2>
+<section id="git-tag">
+<h1><code>git tag</code></h1>
 <p>Tags are like branches, but are stored in <code>.git/refs/tags/the_tag_name</code>
   and a tag is not normally modified. Once created, it's supposed to always point
   to the same version.</p>
 <p>GIT does offer a <code>git tag -f existing-tag new-hash</code> command,
   but using it should be a rare occurrence.</p>
 <textarea id="in17">
-  function git_tag(tag_name, commit_hash) {
-    mkdir(join_paths(current_directory, '.git/refs'));
-    mkdir(join_paths(current_directory, '.git/refs/tags'));
-    if (exists(join_paths(current_directory, '.git/refs/tags/' + tag_name))) {
-      alert("tag already exists");
-      return false;
-    } else {
-      write(join_paths(current_directory, '.git/refs/tags/' + branch_name), commit_hash);
-      return true;
-    }
+function git_tag(tag_name, commit_hash) {
+  mkdir(join_paths(current_directory, '.git/refs'));
+  mkdir(join_paths(current_directory, '.git/refs/tags'));
+  if (exists(join_paths(current_directory, '.git/refs/tags/' + tag_name))) {
+    alert("tag already exists");
+    return false;
+  } else {
+    write(join_paths(current_directory, '.git/refs/tags/' + tag_name), commit_hash + '\n');
+    return true;
   }
-  
-  // git tag v1.0 0123456789012345678901234567890123456789
-  git_tag('v1.0', second_commit);
-</textarea>
-<input type="button" value="eval" onClick="___git_eval(17)">
-<div id="out17"></div>
+}
 
+// git tag v1.0 0123456789012345678901234567890123456789
+git_tag('v1.0', second_commit);
+</textarea>
+</section>
+
+<section id="git-checkout">
+<h1><code>git checkout</code></h1>
+<section id="checkout-branch-vs-other">
+<h1>Checkout, branches and other references</h1>
 <p>More importantly, the HEAD does not normally point to a tag. Although nothing actually
   prevents writing <code>ref: refs/tags/v1.0</code> into <code>.git/HEAD</code>, the GIT
   commands will not automatically do this. For example, <code>git checkout tag-or-branch-or-hash</code>
   will put a symbolic <code>ref: </code> in <code>.git/HEAD</code> only if the argument is a branch.</p>
-
-  <h2><code>git init</code></h2>
-<textarea id="in19">
+<textarea id="in18">
 function git_checkout(tag_or_branch_or_hash) {
   if (exists(join_paths(current_directory, '.git/refs/heads/' + tag_or_branch_or_hash))) {
+    // Normal (attached) HEAD, points to 'ref: refs/heads/the_branch_name'
     write(join_paths(current_directory, '.git/HEAD'), 'ref: refs/heads/' + tag_or_branch_or_hash + '\n');
   } else {
-    write(join_paths(current_directory, '.git/HEAD'), git_rev_parse(tag_or_branch_or_hash));
+    // Detached HEAD, points directly to commit hash
+    write(join_paths(current_directory, '.git/HEAD'), git_rev_parse(tag_or_branch_or_hash) + '\n');
   }
   checkout_files(git_rev_parse('HEAD'));
 }
+</textarea>
+</section>
 
+<section id="checkout-files">
+<h1>Checking out files</h1>
+<textarea>
 function checkout_files(hash) {
-  alert("TODO");
+  var commit = parse_commit(hash);
+  checkout_tree(current_directory, commit.tree);
+}
+
+function checkout_tree(path_prefix, hash) {
+  var entries = parse_tree(hash);
+  for (var i = 0; i < entries.length; i++) {
+    var o = parse_object(entries[i].hash);
+    var entry_path = join_paths(path_prefix, entries[i].name);
+    if (o.type == 'blob') {
+      write(entry_path, o.contents);
+    } else {
+      checkout_tree(entry_path, entries[i].hash)
+    }
+  }
 }
 </textarea>
-<input id="initial-focus" type="button" value="eval" onClick="___git_eval(19)">
-<div id="out19"></div>
+</section>
 
-<h2><code>git init</code></h2>
-<textarea id="in18">
+<section id="parse-assert">
+<h1>Assert</h1>
+The parsers will check that their input looks reasonably well-formed, using <code>assert()</code>.
+<textarea>
+function assert(boolean, text) {
+  if (! boolean) { alert("assertion failed: " + text); throw new Error(text); }
+}
+</textarea>
+</section>
+  
+<section id="parsed-compressed">
+<h1>Reading compressed objects</h1>
+<textarea>
+function parse_object(hash) {
+  var compressed = read(join_paths(current_directory, '.git/objects/' + hash.substr(0,2) + '/' + hash.substr(2)));
+  var inflated = inflate(compressed);
+  var split = inflated.match(/^([\s\S]*?) ([\s\S]*?)\0([\s\S]*)$/);
+  
+  assert(split, "ill-formed object");
+  var type = split[1];
+  var length = split[2];
+  var contents = split[3];
+  assert(contents.length == length, "object has incorrect length");
+  
+  return { type: type, length: length, contents: contents };
+}
+</textarea>
+</section>
+
+<section id="parse-tree">
+<h1>Parsing tree objects</h1>
+<textarea>
+function parse_tree(hash) {
+  var tree = parse_object(hash);
+  var split = tree.contents.split(/(?<=\0[\s\S]{20})/);
+  assert(split, 'invalid contents of tree object');
+  var entries = [];
+  for (var i = 0; i < split.length; i++) {
+    entries.push(parse_tree_entry(split[i]));
+  }
+  return entries;
+}
+</textarea>
+
+<textarea>  
+function parse_tree_entry(entry) {
+  var split = entry.match(/^([0-9]+) ([\s\S]*)\0([\s\S]{20})$/);
+  assert(split, 'invalid entry in tree object');
+  var mode = split[1];
+  var name = split[2];
+  var hash = to_hex(split[3]);
+  return { mode: mode, name: name, hash: hash };
+}
+</textarea>
+
+<p>The <code>parse_tree</code> function above needs a small utility to convert hashes in binary form to a hexadecimal representation.</p>
+<textarea id="in19">
+function to_hex(bin) {
+  var bin = String(bin);
+  var hex = "";
+  for (var i = 0; i < bin.length; i++) {
+    hex += left_pad(bin.charCodeAt(i).toString(16), '0', 2);
+  }
+  return hex;
+}
+</textarea>
+</section>
+
+<section id="parse-commit">
+<h1>Parsing commit objects</h1>
+<textarea>
+function parse_commit(hash) {
+  var commit = parse_object(hash);
+  var lines = commit.contents.split('\n');
+  var tree = null;
+  var parents = [];
+  var author = null;
+  var committer = null;
+  var i;
+  // A blank line separates the headers from the message.
+  for (i = 0; i < lines.length && lines[i] != ''; i++) {
+    var split = lines[i].match(/^(.*?) (.*)$/);
+    assert(split, "ill-formed commit header: " + lines[i]);
+    var header = split[1];
+    var value = split[2];
+    switch (header) {
+      case 'tree':
+        assert(!tree, 'duplicate tree header in commit');
+        assert(/^[0-9a-f]{40}$/.test(value), "invalid tree header in commit");
+        tree = value;
+        break;
+      case 'parent':
+        assert(/^[0-9a-f]{40}$/.test(value), "invalid parent header in commit");
+        parents.push(value);
+        break;
+      case 'author':
+        assert(!author, 'duplicate author header in commit');
+        author = parse_author(value, 'author');
+        break;
+      case 'committer':
+        assert(!committer, 'duplicate committer header in commit');
+        committer = parse_author(value, 'committer');
+        break;
+      default: /* unknown field, skipping */ break;
+    }
+  }
+  // The message is everything after the blank line.
+  message = lines.splice(i+1).join('\n');
+
+  assert(tree,      'commit lacks tree header');
+  assert(author,    'commit lacks author header');
+  assert(committer, 'commit lacks committer header');
+
+  return {
+    tree: tree,
+    parents: parents,
+    author: author,
+    committer: committer,
+    message: message
+  };
+}
+</textarea>
+</section>
+
+<section id="parse-author-committer">
+<h1>Parsing author and committer metadata</h1>
+<textarea>
+function parse_author(value, field) {
+  var split = value.match(/^(.*?) <(.*?)> ([0-9]+) ([+-])([0-9][0-9])([0-9][0-9])$/);
+  assert(split, 'ill-formed ' + field)
+  var name             = split[1];
+  var email            = split[2];
+  var date             = new Date(parseInt(split[3], 10) * 1000);
+  var timezone_sign    = (split[4] == '+' ? 1 : -1);
+  var timezone_hours   = parseInt(split[5], 10);
+  var timezone_minutes = parseInt(split[6], 10);
+  var timezone = timezone_sign * (timezone_hours * 60 + timezone_minutes);
+  return { name: name, email: email, date: date, timzeone: timezone };
+}
+</textarea>
+</section>
+
+<section id="checkout-example">
+<h1>Example checkout</h1>
+<p></p>
+<textarea id="in20">
+git_checkout(initial_commit);
+</textarea>
+</section>
+</section>
+
+<section id="git-init">
+<h1><code>git init</code></h1>
+<p>The <code>git init</code> command creates the <code>.git</code> directory and points <code>.git/HEAD</code>
+  to the default branch (a file which does not exist yet, as this branch does not contain any commit at this point).</p>
+<textarea id="in21">
 function git_init() {
   git_init_mkdir();
   git_init_head();
 }
 </textarea>
-<input id="initial-focus" type="button" value="eval" onClick="___git_eval(18)">
-<div id="out18"></div>
+</section>
 
+<section id="playground">
+<h1>Playground</h1>
+<p>The implementation is now sufficiently complete to create a small repository.</p>
+<textarea id="playground-reset">
+// Reset the filesystem to its initial state
+filesystem = {};
+current_directory = '';
+</textarea>
 
-END OF DOCUMENT
+<textarea id="playground-play">
+cd('proj');
+mkdir('proj');
+write('proj/README', 'This is my implementation of GIT.\n');
+mkdir('proj/src');
+write('proj/src/main.scm', "(define filesystem '())\n...\n");
+
+git_init();
+git_commit(['README', 'src/main.scm'], 'A well-understood initial commit.');
+
+git_branch('dev', 'HEAD');
+git_checkout('dev');
+
+write('proj/src/main.scm', "(define filesystem '())\n(define current_directory \"\")\n");
+git_commit(['README', 'src/main.scm'], 'What an update!');
+
+git_checkout('main');
+</textarea>
+</section>
+
+<section id="conclusion">
+<h1>Conclusion</h1>
+<p>This article shows that the core of GIT can be re-implemented in a few lines of code.</p>
+<ul>
+
+</ul>
+  <li>Some of the features which may appear mysterious at first sight (e.g. detached HEAD) should be clearer with the knowledge of how GIT works behind the scenes.</li>
+  <li>Furthermore, branches are often associated with an intuition (containers into which commits are added) which does not match the implementation (mutable pointers to commits).</li>
+  <li>Finally, it is tempting to think of commits as patches. While <code>darcs</code> tries to expose an interface which matches this intuition, it is clear that the implementation of GIT considers commits as copies of the entire repository, and are linked to the previous version solely by the <code>parent</code> metadata in the commit headers.</li>
+</ul>
+<p>A few core commands like <code>git diff</code> and <code>git apply</code> are not described in this tutorial.
+  They are little more than improved versions of the classical *nix commands <code>diff</code> and <code>patch</code>.</p>
+<p>Most other commands provided by GIT are merely convenience wrappers around these commands. For example, <code>git cherry-pick</code> is simply a combination of <code>git diff</code> between the tree of a commit and the tree of its parent, followed by <code>git apply</code> to apply the patch and <code>git commit</code> to create a new commit whose diff is equivalent to the diff of the original commit. As an other example, the command <code>git rebase</code> performs as succession of <code>cherry-pick</code> operations.</p>
+<p>By keeping in mind the internal model of GIT, it becomes easier to understand the usual commands and their quirks. By undersanding the design philosophy behind the implementation, the day-to-day usage can become, hopefully, less surprising.</p>
+</section>
+
+<div id="toc"></div>
 
 <script>
-document.getElementById("initial-focus").focus();
-</script>
-
-<p></p>
-<textarea id="in000">
-</textarea>
-<input type="button" value="eval" onClick="___git_eval(000)">
-<div id="out000"></div>
-
-<!--
-/*
-function partition(array, filter) {
-  var pass = [];
-  var fail = [];
-  for (i = 0; i < array.length; i++) {
-    if (filter(array[i])) {
-      pass.push(array[i]);
+  function ___level(s) {
+    if (s) {
+      return (s.tagName == 'SECTION' ? 1 : 0) + ___level(s.parentElement);
     } else {
-      fail.push(array[i]);
+      return 0;
     }
   }
-  return { "pass" : pass, "fail" : fail }
-}
-function filenames_to_hierarchy(filenames) {
-  for (var i = 0; i < filenames.length; i++) {
-    filenames[i];
+  function ___process_elements() {
+    var sections = document.getElementsByTagName('section');
+    var stack = [[]];
+    var previousLevel = 1;
+    for (var i = 0; i < sections.length; i++) {
+      var level = ___level(sections[i]);
+      while (level < previousLevel) {
+        var p = stack.pop();
+        previousLevel--;
+      }
+      while (level > previousLevel) {
+        var top_of_stack = stack[stack.length-1];
+        stack.push(top_of_stack[top_of_stack.length-1].subsections);
+        previousLevel++;
+      }
+      stack[stack.length-1].push({ s: sections[i], subsections: [] });
+    }
+    var nested = stack[0];
+    document.getElementById('toc').appendChild(___sections_to_html(nested));
   }
-}*/
--->
+  function ___sections_to_html(sections) {
+    var ol = document.createElement('ol');
+    for (var i = 0; i < sections.length; i++) {
+      var li = document.createElement('li');
+      ol.appendChild(li);
+      var headers = sections[i].s.getElementsByTagName('h1');
+      console.assert(!headers || headers.length >= 1)
+      var target = sections[i].s.getAttribute('id');
+      var a = document.createElement('a');
+      li.appendChild(a);
+      a.innerHTML = headers[0].innerHTML;
+      if (target) { a.setAttribute('href', '#' + target); }
+      if (target) {
+        var a2 = document.createElement('a');
+        ___insertAfter(a2, headers[0]);
+        a2.className = "permalink"
+        a2.setAttribute('href', '#' + target);
+        a2.innerText = "🔗"
+      }
+      li.appendChild(___functions_to_html(sections[i].s));
+      li.appendChild(___sections_to_html(sections[i].subsections));
+    }
+    return ol;
+  }
+  function ___insertAfter(elt, ref) {
+    ref.parentElement.insertBefore(elt, ref.nextSibling);
+  }
+  function ___ancestor(elem, tag) {
+    if (! elem) {
+      return false;
+    }
+    if (elem.tagName.toLowerCase() == tag) {
+      return elem;
+    }
+    return ___ancestor(elem.parentElement, tag);
+  }
+  var ___global_editors = [];
+  function ___functions_to_html(section) {
+    var ul = document.createElement('ul');
+    var ta = section.getElementsByTagName('textarea');
+    for (var j = 0; j < ta.length; j++) {
+      if (___ancestor(ta[j], 'section') == section) {
+        var lines = ta[j].value.split('\n');
+
+        var ret = ___toCodeMirror(ta[j]);
+        var editor = ret.editor;
+        var editor_id = ret.editor_id;
+
+        editor.on('keydown', ___clearScrolledToLine);
+
+        for (var i = 0; i < lines.length; i++) {
+          var text = false;
+          
+          var fun = lines[i].match(/^function\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+          if (fun) { text = fun[1] + '()'; }
+          var v = lines[i].match(/^var\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=/);
+          if (v) { text = v[1]; }
+
+          if (text) {
+            var li = document.createElement('li');
+            var a = document.createElement('a');
+            a.setAttribute('href', 'javascript: ___scrollToLine(___global_editors['+(editor_id)+'], '+i+'); void(0);');
+            var code = document.createElement('code');
+            code.innerText = text;
+            a.appendChild(code);
+            li.appendChild(a);
+            ul.appendChild(li);
+          }
+        }
+      }
+    }
+    return ul;
+  }
+  var ___global_current_highlighted_editor_and_line = false;
+  function ___clearScrolledToLine() {
+    var current = ___global_current_highlighted_editor_and_line;
+    if (current) {
+      current.editor.removeLineClass(current.line, 'background', 'scrolled-to-line');
+    }
+    ___global_current_highlighted_editor_and_line = false;
+  }
+  function ___scrollToLine(editor, line) {
+    ___clearScrolledToLine();
+    ___global_current_highlighted_editor_and_line = { editor: editor, line: line };
+
+    editor.addLineClass(line, 'background', 'scrolled-to-line');
+
+    var editorOffset = ___getOffset(editor.getScrollerElement()).top;
+    var lineOffset = editor.charCoords({line: line, ch: 0}, "local").top;
+    document.body.scrollTo(0, editorOffset + lineOffset - window.innerHeight/2);
+  }
+  function ___toCodeMirror(ta) {
+    var editor = CodeMirror.fromTextArea(ta, {
+      mode: 'javascript',
+      lineNumbers: true,
+      viewportMargin: Infinity
+    });
+    var id = ta.getAttribute('id');
+    ta.remove();
+    var wrapper = editor.getWrapperElement();
+    wrapper.setAttribute('id', id);
+
+    var editor_id = ___global_editors.length;
+    ___global_editors[editor_id] = editor;
+
+    var eval_button = document.createElement('input');
+    eval_button.setAttribute('type', 'button');
+    eval_button.setAttribute('value', 'eval');
+    eval_button.setAttribute('onclick', '___git_eval('+editor_id+')');
+    ___insertAfter(eval_button, wrapper);
+
+    var hide_eval_button = document.createElement('input');
+    hide_eval_button.setAttribute('id', 'hide-eval-' + editor_id);
+    hide_eval_button.setAttribute('type', 'button');
+    hide_eval_button.setAttribute('value', 'hide output');
+    hide_eval_button.setAttribute('onclick', '___hide_eval('+editor_id+')');
+    hide_eval_button.style.display = 'none';
+    ___insertAfter(hide_eval_button, eval_button);
+
+    var out_div = document.createElement('div');
+    out_div.setAttribute('id', 'out' + editor_id);
+    ___insertAfter(out_div, hide_eval_button);
+
+    return { editor: editor, editor_id: editor_id };
+  }
+  function ___hide_eval(editor_id) {
+    document.getElementById('out' + editor_id).innerHTML = '';
+    document.getElementById('hide-eval-' + editor_id).style.display = 'none';
+    ___hilite_off();
+  }
+  ___process_elements();
+</script>
 </body>
 </html>

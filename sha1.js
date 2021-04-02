@@ -41,7 +41,7 @@ class Sha1 {
 
         switch (opt.msgFormat) {
             default: // default is to convert string to UTF-8, as SHA only deals with byte-streams
-            case 'string':   msg = msg;                   break; // utf8Encode(msg);       break;
+            case 'string':   msg = utf8Encode(msg);       break;
             case 'hex-bytes':msg = hexBytesToString(msg); break; // mostly for running tests
         }
 
@@ -157,4 +157,4 @@ class Sha1 {
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  */
 
-//export default Sha1;
+// export default Sha1;
