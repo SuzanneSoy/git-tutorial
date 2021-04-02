@@ -49,7 +49,8 @@ article#git-tutorial { max-width: 63rem; position: absolute; right:18.4em; top:0
 #git-tutorial #toc .notoc { display: none; }
 #git-tutorial h1 { display: inline-block; }
 #git-tutorial h1 + p { clear: both; }
-#git-tutorial .permalink { opacity: 0.5; clear: both; padding: 1.2em 1.2em 0 0.5em; font-size: small; text-decoration: none; color: gray; }
+#git-tutorial .permalink { opacity: 0.5; clear: both; padding: 1.2em 1.2em 0 0.5em;
+                           font-size: small; text-decoration: none; color: gray; }
 #git-tutorial h1:hover + .permalink, #git-tutorial .permalink:hover { opacity: 1; }
 #git-tutorial #toc ul { list-style-type: none; padding: 0 !important; /*list-style-type: disc;*/ }
 #git-tutorial #toc a { color: #666; }

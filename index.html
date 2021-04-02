@@ -12,6 +12,8 @@
 </head>
 <body>
 
+<h1>Under construction</h1>
+
 <article id="git-tutorial">
 <p>The main reference for this tutorial is the <a href="https://git-scm.com/book/en/v2/Git-Internals-Git-Objects">Pro Git book</a> section on GIT internals.</p>
 
@@ -88,9 +90,9 @@ directory.</p>
 function listdir(dirname) {
   var depth = dirname.split('/').length + 1;
   var descendents = filesystem
-      .filter(filename => filename.startsWith(dirname + '/'));
+      .filter(function (filename) { return filename.startsWith(dirname + '/'); });
   var children = descendents
-      .map(filename => filename.split('/')[depth]);
+      .map(function (filename) { return filename.split('/')[depth]; });
   // remove duplicates:
   return Array.from(new Set(children));
 }
@@ -217,14 +219,17 @@ This is done by creating a <em>tree</em> object</p>
 // filenames is a list of strings
 // subtrees is a list of {name, hash} objects.
 function store_tree(base_directory, filenames, subtrees) {
-  var get_file_hash = filename =>
-    from_hex(hash_object(true, 'blob', false, join_paths(base_directory, filename)));
+  function get_file_hash(filename) {
+    return from_hex(hash_object(true, 'blob', false, join_paths(base_directory, filename)));
+  }
 
-  var blobs = filenames.map(filename =>
-    "100644 " + filename + "\0" + get_file_hash(filename));
+  var blobs = filenames.map(function (filename) {
+    return "100644 " + filename + "\0" + get_file_hash(filename)
+  });
 
-  var trees = subtrees.map(subtree =>
-    "40000 " + subtree.name + "\0" + from_hex(subtree.hash));
+  var trees = subtrees.map(function (subtree) {
+    return "40000 " + subtree.name + "\0" + from_hex(subtree.hash);
+  });
   
   tree_contents = blobs.join('') + trees.join('');
 
@@ -235,14 +240,14 @@ function store_tree(base_directory, filenames, subtrees) {
 
 <p>This function needs a small utility to convert hashes encoded in hexadecimal to a binary form.</p>
 <textarea id="in9">
-  function from_hex(hex) {
-    var hex = String(hex);
-    var str = ""
-    for (var i = 0; i < hex.length; i+=2) {
-      str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
-    }
-    return str;
+function from_hex(hex) {
+  var hex = String(hex);
+  var str = ""
+  for (var i = 0; i < hex.length; i+=2) {
+    str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
   }
+  return str;
+}
 </textarea>
 
 <section id="store-tree-example">
@@ -725,8 +730,8 @@ git_checkout(initial_commit);
   to the default branch (a file which does not exist yet, as this branch does not contain any commit at this point).</p>
 <textarea id="in21">
 function git_init() {
-git_init_mkdir();
-git_init_head();
+  git_init_mkdir();
+  git_init_head();
 }
 </textarea>
 </section>
@@ -822,6 +827,10 @@ git_checkout('main');
 // the working directory matches the contents of HEAD.
 store_index(['README', 'src/main.scm']);
 </textarea>
+
+<p>By clicking on "Copy commands to recreate in *nix terminal.", it is possible to copy a series of <code>mkdir …</code> and <code>printf … > …</code> commands that, when executed, will recreate the virtual filesystem on a real system. The resulting
+folder is binary-compatible with the official <code>git log</code>, <code>git status</code>, <code>git checkout</code> etc.
+commands.</p>
 </section>
 
 <section id="conclusion">
