@@ -1,5 +1,5 @@
 <html>
-  <head>
+<head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>GIT tutorial</title>
 <link rel="stylesheet" href="codemirror-5.60.0/lib/codemirror.css">
@@ -1295,7 +1295,7 @@ store_index(['README', 'src/main.scm']);
 
 <section id="conclusion">
 <h1>Conclusion</h1>
-<p>This article shows that a large part of the core of GIT can be re-implemented in <span id="loc-count">a few</span> lines of code (<a href="javascript:___copy_all_code(); void(0);">copy all the code</a>).</p>
+<p>This article shows that a large part of the core of GIT can be re-implemented in <span id="loc-count">a few</span> source lines of code* (<a href="javascript:___copy_all_code(); void(0);">copy all the code</a>). <span style="font-size: small">* empty lines and single closing braces excluded, <span id="loc-count-total">a few more</span> in total.</span></p>
 <div id="copy-all-code" style="display: none;"></div>
 <ul>
 
@@ -1497,7 +1497,8 @@ store_index(['README', 'src/main.scm']);
     }
   }
   ___process_elements();
-  document.getElementById('loc-count').innerText = ___get_all_code().split('\n').length;
+  document.getElementById('loc-count').innerText = ___get_all_code().split('\n').filter(function (l) { return ! (/^(\s*}?)?$/.test(l)); }).length;
+  document.getElementById('loc-count-total').innerText = ___get_all_code().split('\n').length;
 </script>
 </body>
 </html>
