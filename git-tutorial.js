@@ -561,9 +561,10 @@ function ___level(s) {
   function ___get_all_code() {
     var all = '';
     for (var i = 0; i < ___global_editors.length; i++) {
-      all += ___global_editors[i].getValue();
+      var val = ___global_editors[i].getValue()
+      all += val + (val.endsWith('\n') ? '' : '\n') + (val.endsWith('\n\n') ? '' : '\n');
     }
-    return all;
+    return all.substr(0, all.length-1/*remove last newline in the last \n\n*/);
   }
   function ___copy_all_code() {
     var elem = document.getElementById('copy-all-code');
@@ -585,5 +586,18 @@ function ___level(s) {
     }
   }
   ___process_elements();
-  document.getElementById('loc-count').innerText = ___get_all_code().split('\n').filter(function (l) { return ! (/^(\s*}?)?$/.test(l)); }).length;
-  document.getElementById('loc-count-total').innerText = ___get_all_code().split('\n').length;
+
+function ___loc_count() {
+  var srclines = ___get_all_code().split('\n');
+  var lcv = srclines.filter(function (l) { return ! (/^(\s*}?)?$/.test(l)); }).length
+  var lc = document.getElementsByClassName('loc-count');
+  for (var i = 0; i < lc.length; i++) {
+    lc[i].innerText = lcv;
+  }
+  var lctv = srclines.length;
+  var lct = document.getElementsByClassName('loc-count-total');
+  for (var i = 0; i < lct.length; i++) {
+    lct[i].innerText = lctv;
+  }
+}
+___loc_count();
