@@ -138,7 +138,7 @@ function ___hilite(src, dest) {
     var p3 = { left: x, top: yb };
     var p4 = { left: xb, top: yb };
 
-    var thickness = 2;
+    var thickness = 3;
 
     // line 1
     l1.style.width = p2.left-p1.left;
@@ -281,7 +281,7 @@ function ___specialchars_and_colour_and_hex_and_zlib(s) {
   }
   if (inflated) {
     var id=___global_unique_id++;
-    return '<span onClick="___deflated_click('+id+')">'
+    return '<span class="deflate-toggle" onClick="___deflated_click('+id+')">'
       + '<span id="deflated'+id+'-pretty">'
       + '<span class="deflated">deflated:</span>'
       + ___specialchars_and_colour_and_hex(___uint8ArrayToString(inflated))

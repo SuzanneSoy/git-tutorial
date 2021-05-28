@@ -140,16 +140,17 @@ stored under a unique name. The unique name is obtained by hashing the
 contents of the file.</p>
 <textarea id="in5">
 function hash_object(must_write, type, is_data, path_or_data) {
-  var data = is_data ? path_or_data : read(current_directory + "/" + path_or_data);
+  var data = is_data ? path_or_data : read(join_paths(current_directory, path_or_data));
 
   object_contents = type + ' ' + data.length + '\0' + data;
 
-  var hash = sha1(object_contents)
+  var hash = sha1(object_contents);
 
   if (must_write) {
     mkdir(join_paths(current_directory, '.git/objects'));
-    mkdir(join_paths(current_directory, '.git/objects/' + hash.slice(0,2)));
-    var object_path = join_paths(current_directory, '.git/objects/' + hash.slice(0,2) + '/' + hash.slice(2));
+    mkdir(join_paths(current_directory, '.git/objects/' + hash.substr(0,2)));
+    var object_path = join_paths(current_directory, '.git/objects/' + hash.substr(0,2) + '/' + hash.substr(2));
+    // deflate() compresses using zlib
     write(object_path, deflate(object_contents));
   }
 
@@ -171,9 +172,9 @@ hash_object(true, 'blob', false, 'README');
 </textarea>
 <p>The objects stored in the GIT database are compressed with zlib
 (using the "deflate" compression method). The filesystem view shows
-the <span class="deflated">deflated:</span> followed by the uncompressed
-data. Click on the file contents to toggle between this pretty-printed
-view and the raw compressed data.
+the marker <span class="deflated">deflated:</span> followed by the
+uncompressed data. Click on the file contents to toggle between this
+pretty-printed view and the raw compressed data.
 </p>
 
 <p>You will notice that the database does not contain the name of the
@@ -189,7 +190,7 @@ hash_object(true, 'blob', false, 'src/main.scm');
 
 <section id="zlib-compression-note">
 <h1><code>zlib</code> compression</h1>
-<p>The real implementation of GIT compresses objects with zlib. To
+<p>GIT compresses objects with zlib. To
 view a zlib-compressed object in your terminal, simply write this
 declaration in your shell, and then call e.g. <code>unzlib
 .git/objects/95/d318ae78cee607a77c453ead4db344fc1221b7</code></p>
@@ -211,7 +212,7 @@ files, but it would be nice to also store the filenames.
 This is done by creating a <em>tree</em> object</p>
 
 <p>A tree object can contain files (by associating the file's blob to its name), or directories (by associating the hash of other subtrees to their name).
-  The mode (<code>100644</code> for the file and <code>40000</code>) incidates the permissions, and is given in octal using <a href="https://unix.stackexchange.com/a/145118/19059">the values used by *nix</a></p>
+  The mode (<code>100644</code> for the file and <code>40000</code> for the folder) incidates the permissions, and is given in octal using <a href="https://unix.stackexchange.com/a/145118/19059">the values used by *nix</a></p>
 
 <textarea id="in8">
 // base_directory is a string
@@ -219,7 +220,9 @@ This is done by creating a <em>tree</em> object</p>
 // subtrees is a list of {name, hash} objects.
 function store_tree(base_directory, filenames, subtrees) {
   function get_file_hash(filename) {
-    return from_hex(hash_object(true, 'blob', false, join_paths(base_directory, filename)));
+    var path = join_paths(base_directory, filename);
+    var hash = hash_object(true, 'blob', false, path)
+    return hex_to_bin(hash);
   }
 
   var blobs = filenames.map(function (filename) {
@@ -227,19 +230,20 @@ function store_tree(base_directory, filenames, subtrees) {
   });
 
   var trees = subtrees.map(function (subtree) {
-    return "40000 " + subtree.name + "\0" + from_hex(subtree.hash);
+    return "40000 " + subtree.name + "\0" + hex_to_bin(subtree.hash);
   });
   
-  tree_contents = blobs.join('') + trees.join('');
+  // blobs are listed before subtrees
+  var tree_content = blobs.join('') + trees.join('');
 
-  // cat tree_contents | git hash-object -w -t tree --stdin
-  return hash_object(true, 'tree', true, tree_contents);
+  // cat tree_content | git hash-object -w -t tree --stdin
+  return hash_object(true, 'tree', true, tree_content);
 }
 </textarea>
 
 <p>This function needs a small utility to convert hashes encoded in hexadecimal to a binary form.</p>
 <textarea id="in9">
-function from_hex(hex) {
+function hex_to_bin(hex) {
   var hex = String(hex);
   var str = ""
   for (var i = 0; i < hex.length; i+=2) {
@@ -252,8 +256,8 @@ function from_hex(hex) {
 <section id="store-tree-example">
 <h1>Example use of store_tree</h1>
 <textarea id="in10">
-//hash_src_tree  = store_tree("src/", ["main.scm"], []);
-//hash_root_tree = store_tree("",     ["README"],   [{name:"src", hash:hash_src_tree}]);
+//hash_src_tree  = store_tree("src", ["main.scm"], []);
+//hash_root_tree = store_tree("",    ["README"],   [{name:"src", hash:hash_src_tree}]);
 </textarea>
 </section>
 
@@ -756,7 +760,7 @@ function git_init() {
   for a more in-depth study of the index.</p>
 <textarea id="index-binary-utils">
 function binary(val, bytes) {
-  return from_hex(left_pad(val.toString(16), '0', bytes*2));
+  return hex_to_bin(left_pad(val.toString(16), '0', bytes*2));
 }
 
 function binary16(val) { return binary(val, 2); }
@@ -783,7 +787,7 @@ function store_index(paths) {
     var uid    = binary32(0);
     var gid    = binary32(0);
     var size   = binary32(read(join_paths(current_directory, paths[i])).length);
-    var hash   = from_hex(hash_object(true, 'blob', false, paths[i]));
+    var hash   = hex_to_bin(hash_object(true, 'blob', false, paths[i]));
     // for this simple index, the flags (the 4 higher bits) are 0.
     assert(paths[i].length < 0xfff)
     var flags_and_file_path_length = binary16(paths[i].length)
@@ -798,7 +802,7 @@ function store_index(paths) {
     index += entry;
   }
 
-  index += from_hex(sha1(index));
+  index += hex_to_bin(sha1(index));
 
   write(join_paths(current_directory, '.git/index'), index)
 }
