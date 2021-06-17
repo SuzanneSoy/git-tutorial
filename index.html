@@ -9,12 +9,31 @@
 <script src="pako.min.js"></script>
 <link rel="stylesheet" href="codemirror-5.60.0/lib/codemirror.css">
 <link rel="stylesheet" href="git-tutorial.css">
+<script src="git-tutorial.js"></script>
+<script class="example">
+var examples=[];
+function ___h2f(hash) { return 'proj/.git/objects/'+hash.substr(0,2)+'/'+hash.substr(2); }
+function ___example(id, f) {
+  examples.push(function () {
+    var result = f();
+    var fs = {};
+    for (var i = 0; i < result.names.length; i++) {
+      fs[result.names[i]] = filesystem[result.names[i]];
+    }
+    var previous_fs = {};
+    for (var i = 0; i < result.previous_names.length; i++) {
+      previous_fs[result.previous_names[i]] = filesystem[result.previous_names[i]];
+    }
+    document.getElementById(id).innerHTML = ___filesystem_to_string(fs, true, previous_fs);
+  });
+}
+</script>
 </head>
 <body>
 
+<article id="git-tutorial">
 <h1>Under construction</h1>
 
-<article id="git-tutorial">
 <p>The main reference for this tutorial is the <a href="https://git-scm.com/book/en/v2/Git-Internals-Git-Objects">Pro Git book</a> section on GIT internals.</p>
 
 <p>This tutorial uses three libraries:</p>
@@ -23,8 +42,6 @@
   <li><a href="https://www.movable-type.co.uk/scripts/sha1.html">sha1.js</a>, released under the MIT license</li>
   <li><a href="https://github.com/nodeca/pako">pako 2.0.3</a>, released under the MIT and Zlib licenses, see the project page for details.</li>
 </ul>
-
-<div id="lines"></div>
 
 <section id="introduction">
 <h1>Introduction</h1>
@@ -44,7 +61,7 @@ excluded, <span class="loc-count-total">a few more</span> in total.</span>
 
 <section id="os-filesystem-model">
 <h1>Model of the filesystem</h1>
-<p>We will simulate the Operating System's filesystem with a very
+<p>The Operating System's filesystem will be simulated by a very
 simple key-value store. In this very simple filesystem, directories
 are entries mapped to <code>null</code> and files are entries mapped
 to strings. The path to the current directory is stored in a separate
@@ -124,21 +141,70 @@ function join_paths(a, b) {
   return (a == "") ? b : (a + "/" + b);
 }
 
+// git init (partial implementation: create the .git directory)
 function git_init_mkdir() {
   mkdir(join_paths(current_directory, '.git'));
 }
 
 git_init_mkdir();
 </textarea>
+<p>Click on the <em>eval</em> button to see the files and directories that were
+  created so far.</p>
 </section>
 
 <section id="git-hash-object">
 <h1><code>git hash-object</code><span class="notoc"> (storing a copy of a file in <code>.git</code>)</span></h1>
-<p>The most basic element of a GIT repository is an object. It is a
-copy of a file that is stored in GIT&apos;s database. That copy is
-stored under a unique name. The unique name is obtained by hashing the
-contents of the file.</p>
+<p>The most basic element of a GIT repository is an <em>object</em>. Objects have a type which can be
+<code>blob</code> (individual files), <code>tree</code> (directories),
+<code>commit</code> (pointers to a specific version of the root directory,
+with a description and some metadata) and <code>tag</code> (named pointers to a specific commit,
+with a description and some metadata).
+
+When a file is added to the git repostitory, a compressed copy is stored in GIT&apos;s database,
+in the <code>.git/objects/</code> folder. This copy is a <em>blob</em> object.</p>
+<p>The compressed copy is given a unique filename, which is obtained by hashing the contents of the original file.
+Some filesystems have poor performance when a single directory contains a large number of files, and some filesystems
+have a limit on the number of files that a directory may contain. To circumvent these issues, the first two characters
+of the hash are used as the name of an intermediate directory: if a file's hash is <code>0a1bd…</code>, its compressed
+copy will be stored in <code>.git/objects/0a/1bd…</code></p>
+
+<p>This function creates a file that looks like this:</p>
+
+<div id="example-blob-object-template"></div>
+<script class="example">
+  ___example('example-blob-object-template', function() {
+    var object_contents = 'type length\000Contents of path_or_data';
+    var hash = sha1(object_contents);
+    var path = ___h2f(hash);
+    write(path, deflate(object_contents));
+    return { filesystem: filesystem, names: [path], previous_names: [] };
+  });
+</script>
+
+<p>The objects stored in the GIT database are compressed with zlib
+(using the "deflate" compression method). The filesystem view shows
+the marker <span class="deflated">deflated:</span> followed by the
+uncompressed data. Click on the (un)compressed data to toggle between
+this pretty-printed view and the raw compressed data.</p>
+
+<p>When creating some <code>blob</code> objects, the result could be, for example:</p>
+
+<div id="example-blob-objects"></div>
+<script class="example">
+  ___example('example-blob-objects', function() {
+    var names = [
+      ___h2f(hash_object(true, 'blob', false, 'src/main.scm')),
+      ___h2f(hash_object(true, 'blob', false, 'README')),
+    ];
+    return { filesystem: filesystem, names: names, previous_names: [] };
+  });
+</script>
+
+<p>This function reproduces faithfully the behaviour of (a subset of the options of)
+the <code>git hash-object</code> command which can be called on a real git command-line.</p>
+
 <textarea id="in5">
+// git hash-object [-w] -t <type> [--stdin] [path]
 function hash_object(must_write, type, is_data, path_or_data) {
   var data = is_data ? path_or_data : read(join_paths(current_directory, path_or_data));
 
@@ -170,16 +236,12 @@ a <em>blob</em> object, i.e. the contents of a file.</p>
 // git hash-object -w -t blob README
 hash_object(true, 'blob', false, 'README');
 </textarea>
-<p>The objects stored in the GIT database are compressed with zlib
-(using the "deflate" compression method). The filesystem view shows
-the marker <span class="deflated">deflated:</span> followed by the
-uncompressed data. Click on the file contents to toggle between this
-pretty-printed view and the raw compressed data.
-</p>
+<p>Click on the <em>eval</em> button to see the file that was
+created by this call.</p>
 
-<p>You will notice that the database does not contain the name of the
-file, only its contents, stored under a unique identifier which is
-derived by hashing its contents. Let&apos;s add the second user file
+<p>You can notice that the database does not contain the name of the
+original file, only its content, stored under a unique identifier which is
+derived by hashing that content. Let&apos;s add the second user file
 to the database.</p>
 <textarea id="in7">
 // git hash-object -w -t blob src/main.scm
@@ -190,11 +252,10 @@ hash_object(true, 'blob', false, 'src/main.scm');
 
 <section id="zlib-compression-note">
 <h1><code>zlib</code> compression</h1>
-<p>GIT compresses objects with zlib. To
-view a zlib-compressed object in your terminal, simply write this
-declaration in your shell, and then call e.g. <code>unzlib
-.git/objects/95/d318ae78cee607a77c453ead4db344fc1221b7</code></p>
-
+<p>GIT compresses objects with zlib. The <code>deflate()</code> function used in
+the script above comes from the <a href="https://github.com/nodeca/pako">pako 2.0.3</a> library.
+To view a zlib-compressed object in your *nix terminal, simply write this
+declaration in your shell.</p>
 <pre>
 unzlib() {
   python -c \
@@ -203,16 +264,34 @@ unzlib() {
     "$1"
 }
 </pre>
+<p>You can then inspect git objects as follows, using <code>hexdump</code> to view the null bytes and other non-printable bytes.</p>
+<pre>unzlib .git/objects/95/d318ae78cee607a77c453ead4db344fc1221b7 | hexdump -Cv</pre>
 </section>
 
 <section id="storing-trees">
 <h1>Storing trees (list of hashed files and subtrees)</h1>
-<p>Now GIT knows about the contents of both of the user's
+<p>At this point GIT knows about the contents of both of the user's
 files, but it would be nice to also store the filenames.
 This is done by creating a <em>tree</em> object</p>
 
-<p>A tree object can contain files (by associating the file's blob to its name), or directories (by associating the hash of other subtrees to their name).
+<p>A tree object can contain files (by associating the blob's hash to its name), or directories (by associating the hash of other subtrees to their name).
   The mode (<code>100644</code> for the file and <code>40000</code> for the folder) incidates the permissions, and is given in octal using <a href="https://unix.stackexchange.com/a/145118/19059">the values used by *nix</a></p>
+
+<div id="example-tree-objects"></div>
+<script class="example">
+  ___example('example-tree-objects', function() {
+    var main   = ___h2f(hash_object(true, 'blob', false, 'src/main.scm'));
+    var readme = ___h2f(hash_object(true, 'blob', false, 'README'));
+    var src    = ___h2f(store_tree("src", ["main.scm"], []));
+    var proj   = ___h2f(paths_to_tree(["README", "src/main.scm"]));
+    var previous_names = [ main, readme ];
+    var names          = [ main, readme, src, proj ];
+    return { filesystem: filesystem, names: names, previous_names: previous_names };
+  });
+</script>
+
+<p>In the contents of a tree, subdirectories (trees) are listed before files (blobs);
+  within each group the entries are ordered alphabetically.</p>
 
 <textarea id="in8">
 // base_directory is a string
@@ -222,15 +301,15 @@ function store_tree(base_directory, filenames, subtrees) {
   function get_file_hash(filename) {
     var path = join_paths(base_directory, filename);
     var hash = hash_object(true, 'blob', false, path)
-    return hex_to_bin(hash);
+    return hex_to_raw_bytes(hash);
   }
 
   var blobs = filenames.map(function (filename) {
-    return "100644 " + filename + "\0" + get_file_hash(filename)
+    return "100644 " + filename + "\0" + get_file_hash(filename);
   });
 
   var trees = subtrees.map(function (subtree) {
-    return "40000 " + subtree.name + "\0" + hex_to_bin(subtree.hash);
+    return "40000 " + subtree.name + "\0" + hex_to_raw_bytes(subtree.hash);
   });
   
   // blobs are listed before subtrees
@@ -241,9 +320,9 @@ function store_tree(base_directory, filenames, subtrees) {
 }
 </textarea>
 
-<p>This function needs a small utility to convert hashes encoded in hexadecimal to a binary form.</p>
+<p>This function needs a small utility to convert hashes encoded in hexadecimal to raw bytes.</p>
 <textarea id="in9">
-function hex_to_bin(hex) {
+function hex_to_raw_bytes(hex) {
   var hex = String(hex);
   var str = ""
   for (var i = 0; i < hex.length; i+=2) {
@@ -254,41 +333,73 @@ function hex_to_bin(hex) {
 </textarea>
 
 <section id="store-tree-example">
-<h1>Example use of store_tree</h1>
+<h1>Example use of <code>store_tree()</code></h1>
+
+<p>The following code, once uncommented, stores into the GIT database the trees for <code>src</code>
+and for the root directory of the GIT project.</p>
 <textarea id="in10">
 //hash_src_tree  = store_tree("src", ["main.scm"], []);
 //hash_root_tree = store_tree("",    ["README"],   [{name:"src", hash:hash_src_tree}]);
 </textarea>
+<p>The <code>store_tree()</code> function needs to be called for the contents of subdirectories
+first, and that result can be used to store the trees of upper directories. In the next section,
+we will write a function which takes a list of paths, constructs an internal representation of
+the hierarchy, and stores the corresponding trees bottom-up.</p>
 </section>
 
 <section id="store-tree-from-paths">
 <h1>Storing a tree from a list of paths</h1>
-<p>Making trees out of the subfolders one by one is cumbersome. Here's a utility function which takes a list of paths, and builds a tree from those.</p>
+<p>Making trees out of the subfolders one by one is cumbersome.
+The following utility function takes a list of paths, and builds
+a tree from those.</p>
 
 <textarea id="in11">
 function paths_to_tree(paths) {
+  // This temporary mutable object will store a hierarchy of
+  // subfolders and files, e.g.
+  // {
+  //   subfolders: { src: { subfolders: [], files: ['main.scm'] } }
+  //   files: ['README']
+  // }
   var hierarchy = { subfolders: {}, files: [] };
+
+  // This splits the input paths on occurrences of "/",
+  // and inserts them into the "hierarchy" object.
   for (var i = 0; i < paths.length; i++) {
     var path_components = paths[i].split('/');
     var h = hierarchy;
     for (var j = 0; j < path_components.length - 1; j++) {
       if (! h.subfolders.hasOwnProperty(path_components[j])) {
-        h.subfolders[path_components[j]] = { subfolders: {}, files: [] };
+        h.subfolders[path_components[j]] = {
+          subfolders: {},
+          files: []
+        };
       }
       h = h.subfolders[path_components[j]];
     }
-    h.files.push(path_components[i]);
+    h.files[h.files.length] = path_components[path_components.length - 1];
   }
 
+  // This function takes the path to a directory, e.g. "src",
+  // and a hierarchy object e.g. { subfolders: [], files: ['main.scm'] }.
+  // It recursively stores the tree object for that directory into
+  // GIT's database.
   var to_tree = function(base_directory, hierarchy) {
     var subtrees = [];
     for (var i in hierarchy.subfolders) {
       if (hierarchy.subfolders.hasOwnProperty(i)) {
-        subtrees.push({ name: i, hash: to_tree(join_paths(base_directory, i), hierarchy.subfolders[i]) });
+        subtrees[subtrees.length] = {
+          name: i,
+          hash: to_tree(join_paths(base_directory, i), hierarchy.subfolders[i])
+        };
       }
     }
     return store_tree(base_directory, hierarchy.files, subtrees);
   }
+
+  // Store the trees for the whole hierarchy, starting from the
+  // root directory of the GIT repository (which is represented
+  // as an empty path "")
   return to_tree("", hierarchy);
 }
 
@@ -303,21 +414,41 @@ paths_to_tree(["README", "src/main.scm"]);
 <p>Now that the GIT database contains the entire tree for the current version,
 a commit can be created. A commit contains</p>
 <ul>
-  <li>a pointer to the tree</li>
-  <li>a pointer to the previous ("parent") commit (or to multiple parent commits merging them, or no parents for the initial commit)</li>
-  <li>information about the author (the person who initially wrote the code)</li>
+  <li>the hash of the tree object,</li>
+  <li>the hash of the previous commit, which is dubbed the <code>parent</code> (merge commits have two or more parents, and the initial commit has no parent commit),</li>
+  <li>information about the author (the person who initially wrote the code),</li>
   <li>information about the committer (the person who adds the code to the GIT
     database, often the same person as the author, but it can be a different person
-    e.g. when someone else makes changes to the history or applies a patch recieved
-    by e-mail)</li>
-  <li>a description</li>
+    e.g. when someone else rewrites the history with a rebase or applies a patch recieved
+    by e-mail),</li>
+  <li>and a description.</li>
 </ul>
+
+<div id="example-commit-object"></div>
+<script class="example">
+  ___example('example-commit-object', function() {
+    var main   = ___h2f(hash_object(true, 'blob', false, 'src/main.scm'));
+    var readme = ___h2f(hash_object(true, 'blob', false, 'README'));
+    var src    = ___h2f(store_tree("src", ["main.scm"], []));
+    var proj   = ___h2f(paths_to_tree(["README", "src/main.scm"]));
+    var initial_commit = ___h2f(store_commit(
+      paths_to_tree(["README", "src/main.scm"]),
+      [],
+      {name:'Ada Lovelace', email:'ada@analyti.cal', date:new Date(1617120803000), timezoneMinutes: +60},
+      {name:'Ada Lovelace', email:'ada@analyti.cal', date:new Date(1617120803000), timezoneMinutes: +60},
+      'Initial commit'));
+    var previous_names = [ main, readme, src, proj ];
+    var names          = [ main, readme, src, proj, initial_commit ];
+    return { filesystem: filesystem, names: names, previous_names: previous_names };
+  });
+</script>
+
 <p>The author and committer information contain</p>
 <ul>
-  <li>the person's name</li>
-  <li>the person's email</li>
-  <li>the *nix timestamp at which the version was authored or committed</li>
-  <li>the <a href="https://www.youtube.com/watch?v=q2nNzNo_Xps">timezone for that timestamp</a></li>
+  <li>the person's name,</li>
+  <li>the person's email,</li>
+  <li>the *nix timestamp at which the version was authored or committed,</li>
+  <li>and the <a href="https://www.youtube.com/watch?v=q2nNzNo_Xps">timezone for that timestamp</a>.</li>
 </ul>
 <textarea id="in12">
 function store_commit(tree, parents, author, committer, message) {
@@ -373,7 +504,61 @@ initial_commit = store_commit(
 
 <section id="resolving-references">
 <h1>resolving references</h1>
+
+<p>The next few sections will introduce <em>symbolic references</em>
+like branch names, the special name <code>HEAD</code> or tag names.</p>
+
+<p>Symbolic references are nothing more than regular files containing a hexadecimal
+hash or a string of the form <code>ref: path/to/other/symbolic/reference</code>.
+The <code>HEAD</code> reference is stored in <code>.git/HEAD</code>, and can point
+directly to a commit hash like
+<span id="example-reference-head-hash">0123456789abcdef0123456789abcdef01234567</span>,
+or can point to another symbolic reference, in which case the <code>.git/HEAD</code> file
+will contain e.g. <code>refs/heads/main</code>.</p>
+
+<p>Branches are simple files stored in <code>.git/refs/heads/name-of-the-branch</code></p>
+
+<div id="example-reference"></div>
+<script class="example">
+    ___example('example-reference', function() {
+    var h2f = function(hash) { return 'proj/.git/objects/'+hash.substr(0,2)+'/'+hash.substr(2); }
+    var main = h2f(hash_object(true, 'blob', false, 'src/main.scm'));
+    var readme = h2f(hash_object(true, 'blob', false, 'README'));
+    var src = h2f(store_tree("src", ["main.scm"], []));
+    var proj = h2f(paths_to_tree(["README", "src/main.scm"]));
+    
+    var initial_commit_hash = store_commit(
+      paths_to_tree(["README", "src/main.scm"]),
+      [],
+      {name:'Ada Lovelace', email:'ada@analyti.cal', date:new Date(1617120803000), timezoneMinutes: +60},
+      {name:'Ada Lovelace', email:'ada@analyti.cal', date:new Date(1617120803000), timezoneMinutes: +60},
+      'Initial commit');
+    var initial_commit = h2f(initial_commit_hash);
+    
+    git_branch('main', initial_commit_hash, true);
+    var main_branch = 'proj/.git/refs/heads/main';
+    
+    git_tag('v1.0', initial_commit_hash, true);
+    var v1_0_tag = 'proj/.git/refs/tags/v1.0';
+    
+    git_init_head();
+    var head = 'proj/.git/HEAD';
+
+    document.getElementById('example-reference-head-hash').innerText = initial_commit_hash;
+
+    var previous_names = [ main, readme, src, proj, initial_commit ];
+    var names          = [ main, readme, src, proj, initial_commit, main_branch, v1_0_tag, head ];
+    return { filesystem: filesystem, names: names, previous_names: previous_names }
+  });
+</script>
+
+<p>We'll start with a small utility to remove the newline at the end of a string.
+GIT references are usually files containing a hexadecimal hash, and following
+*NIX tradition these files finish with a newline byte. When reading these
+references, we need to get rid of the newline first.</p>
+
 <textarea>
+// Removes the newline at the end of a string, if present.
 function trim_newline(s) {
   if (s.endsWith('\n')) { return s.substr(0, s.length-1); } else { return s; }
 }
@@ -526,10 +711,10 @@ var second_commit = git_commit(['README', 'src/main.scm'], 'Some updates');
 <p>GIT does offer a <code>git tag -f existing-tag new-hash</code> command,
   but using it should be a rare occurrence.</p>
 <textarea id="in17">
-function git_tag(tag_name, commit_hash) {
+function git_tag(tag_name, commit_hash, force) {
   mkdir(join_paths(current_directory, '.git/refs'));
   mkdir(join_paths(current_directory, '.git/refs/tags'));
-  if (exists(join_paths(current_directory, '.git/refs/tags/' + tag_name))) {
+  if (!force && exists(join_paths(current_directory, '.git/refs/tags/' + tag_name))) {
     alert("tag already exists");
     return false;
   } else {
@@ -643,7 +828,7 @@ function parse_tree_entry(entry) {
 }
 </textarea>
 
-<p>The <code>parse_tree</code> function above needs a small utility to convert hashes in binary form to a hexadecimal representation.</p>
+<p>The <code>parse_tree</code> function above needs a small utility to convert hashes represented using raw bytes to a hexadecimal representation.</p>
 <textarea id="in19">
 function to_hex(bin) {
   var bin = String(bin);
@@ -758,39 +943,39 @@ function git_init() {
   The mock filesystem used here lacks most of these pieces of information, so thr value <code>0</code>
   will be used for most fields. See <a href="https://mincong.io/2018/04/28/git-index/">this blog post</a>
   for a more in-depth study of the index.</p>
-<textarea id="index-binary-utils">
-function binary(val, bytes) {
-  return hex_to_bin(left_pad(val.toString(16), '0', bytes*2));
+<textarea id="index-raw-bytes-utils">
+function raw_bytes(val, bytes) {
+  return hex_to_raw_bytes(left_pad(val.toString(16), '0', bytes*2));
 }
 
-function binary16(val) { return binary(val, 2); }
-function binary32(val) { return binary(val, 4); }
-function binary64(val) { return binary(val, 8); }
+function raw_bytes16(val) { return raw_bytes(val, 2); }
+function raw_bytes32(val) { return raw_bytes(val, 4); }
+function raw_bytes64(val) { return raw_bytes(val, 8); }
 </textarea>
 
 <textarea id="make-index">
 function store_index(paths) {
   var magic = 'DIRC' // DIRectory Cache
-  var version = binary32(2);
-  var entries = binary32(paths.length);
+  var version = raw_bytes32(2);
+  var entries = raw_bytes32(paths.length);
   var header = magic + version + entries;
 
   index = header;
 
   for (var i = 0; i < paths.length; i++) {
-    var ctime  = binary64(0);
-    var mtime  = binary64(0);
-    var device = binary32(0);
-    var inode  = binary32(0);
+    var ctime  = raw_bytes64(0);
+    var mtime  = raw_bytes64(0);
+    var device = raw_bytes32(0);
+    var inode  = raw_bytes32(0);
     // default permissions for files, in octal.
-    var mode   = binary32(0100644);
-    var uid    = binary32(0);
-    var gid    = binary32(0);
-    var size   = binary32(read(join_paths(current_directory, paths[i])).length);
-    var hash   = hex_to_bin(hash_object(true, 'blob', false, paths[i]));
+    var mode   = raw_bytes32(0100644);
+    var uid    = raw_bytes32(0);
+    var gid    = raw_bytes32(0);
+    var size   = raw_bytes32(read(join_paths(current_directory, paths[i])).length);
+    var hash   = hex_to_raw_bytes(hash_object(true, 'blob', false, paths[i]));
     // for this simple index, the flags (the 4 higher bits) are 0.
     assert(paths[i].length < 0xfff)
-    var flags_and_file_path_length = binary16(paths[i].length)
+    var flags_and_file_path_length = raw_bytes16(paths[i].length)
     var file_path = paths[i] + '\0';
     entry = ctime + mtime + device + inode + mode + uid + gid + size
           + hash + flags_and_file_path_length + file_path;
@@ -802,7 +987,7 @@ function store_index(paths) {
     index += entry;
   }
 
-  index += hex_to_bin(sha1(index));
+  index += hex_to_raw_bytes(sha1(index));
 
   write(join_paths(current_directory, '.git/index'), index)
 }
@@ -844,7 +1029,7 @@ store_index(['README', 'src/main.scm']);
 </textarea>
 
 <p>By clicking on "Copy commands to recreate in *nix terminal.", it is possible to copy a series of <code>mkdir …</code> and <code>printf … > …</code> commands that, when executed, will recreate the virtual filesystem on a real system. The resulting
-folder is binary-compatible with the official <code>git log</code>, <code>git status</code>, <code>git checkout</code> etc.
+folder is bit-compatible with the official <code>git log</code>, <code>git status</code>, <code>git checkout</code> etc.
 commands.</p>
 </section>
 
@@ -869,6 +1054,26 @@ commands.</p>
 <div id="toc"></div>
 </article>
 
-<script src="git-tutorial.js"></script>
+<script>
+  (function() {
+      var script = '';
+      var ta = document.getElementsByTagName('textarea');
+      for (var j = 0; j < ta.length; j++) {
+        if (ta[j] == document.getElementById('playground-reset')) {
+          break;
+        }
+        script += ta[j].value + "\n\n";
+      }
+      var js = document.getElementsByTagName('script');
+      for (var j = 0; j < js.length; j++) {
+        if (js[j].className.indexOf('example') != -1) {
+          script += js[j].innerText;
+        }
+      }
+      script += '\nfor (var i = 0; i < examples.length; i++) { examples[i](); }';
+      eval(script);
+  })();
+  ___git_tutorial_onload()
+</script>
 </body>
 </html>
