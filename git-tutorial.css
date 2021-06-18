@@ -51,6 +51,7 @@ article#git-tutorial table { width: 77rem; margin-left: calc( ( ( 63rem - 77rem 
 #git-tutorial tr:last-child td { border:thin solid #aaa; }
 #git-tutorial tr:hover td { opacity: 1; border:thin solid black; }
 #git-tutorial tr:last-child.different td, #git-tutorial .different td { border: thin solid black; opacity: 1; background: #f0f6f8; }
+#git-tutorial table .empty-filesystem { text-align: center !important; color: #444 !important; opacity: 1 !important; border: thin solid black !important; }
 #git-tutorial .specialchar { color: red; word-wrap: normal; }
 #git-tutorial .hex-prefix { color: lightgrey; }
 #git-tutorial .hex { color: brown; }
@@ -90,3 +91,7 @@ article#git-tutorial .onlytoc { display: none; }
 /* Highlight elements when a click on e.g. a hash scrolls to the destination */
 #git-tutorial .scroll-destination-hilite, #git-tutorial .scroll-destination-hilite td { transition: background 0.5s linear 0.5s, opacity 0.4s linear 0.5s; background: #ffd3d3 !important; opacity: 1 !important; }
 #git-tutorial .scroll-destination-lolite, #git-tutorial .scroll-destination-lolite td { transition: background linear 0.5s, opacity linear 0.5s; }
+#git-tutorial .trivia { opacity: 80%; border: thin solid slategrey; margin: 1em; padding: 0.3em; }
+#git-tutorial .trivia:before { content: "Trivia"; border-bottom: thin solid slategrey; display: block; text-align: center; }
+#git-tutorial .trivia table { min-width: 90%; max-width: 90%; width: 90%; margin-left: auto; margin-right: auto; }
+/*#git-tutorial .trivia table td.cell-contents, #git-tutorial .trivia table th.cell-contents { width: 30%; }*/

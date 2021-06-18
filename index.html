@@ -516,7 +516,16 @@ directly to a commit hash like
 or can point to another symbolic reference, in which case the <code>.git/HEAD</code> file
 will contain e.g. <code>refs/heads/main</code>.</p>
 
-<p>Branches are simple files stored in <code>.git/refs/heads/name-of-the-branch</code></p>
+<p>Branches are simple files stored in <code>.git/refs/heads/name-of-the-branch</code>
+and usually contain a hash like
+<span id="example-reference-branch-hash">0123456789abcdef0123456789abcdef01234567</span>.</p>
+
+<p>Tags are identical to branches in terms of representation. It seems that the only difference
+between tags and branches is the behaviour of <code>git checkout</code> and similar commands.
+These commands, as explained in <a href="git-checkout">the section about <code>git checkout</code></a> below,
+normally write <code>ref: refs/heads/name-of-branch</code> in <code>.git/HEAD</code> when
+checking out a branch, but write the hash of the target commit when checking out a tag or
+any other non-branch reference.</p>
 
 <div id="example-reference"></div>
 <script class="example">
@@ -545,6 +554,7 @@ will contain e.g. <code>refs/heads/main</code>.</p>
     var head = 'proj/.git/HEAD';
 
     document.getElementById('example-reference-head-hash').innerText = initial_commit_hash;
+    document.getElementById('example-reference-branch-hash').innerText = initial_commit_hash;
 
     var previous_names = [ main, readme, src, proj, initial_commit ];
     var names          = [ main, readme, src, proj, initial_commit, main_branch, v1_0_tag, head ];
@@ -566,21 +576,77 @@ function trim_newline(s) {
 
 <section id="git-symbolic-ref">
 <h1><code>git symbolic-ref</code></h1>
+<p><code>git symbolic-ref</code> is a low-level command which reads
+(and in the official GIT implementation also writes and updates)
+symbolic references given a path relative to <code>.git/</code>.
+For example, <code>git symbolic-ref HEAD</code> will read the
+contents of the file <code>.git/HEAD</code>, and if that file starts
+with <code>ref: </code>, the rest of the line will be returned.</p>
+
 <textarea>
 function git_symbolic_ref(ref) {
   var ref_file = join_paths(current_directory, '.git/' + ref);
   if (exists(ref_file) && read(ref_file).startsWith('ref: ')) {
-    return trim_newline(read(ref_file)).substr('ref: '.length);
+    var result = trim_newline(read(ref_file)).substr('ref: '.length);
+    var recursive = git_symbolic_ref(result);
+    return recursive || result;
   } else {
     return false;
   }
 }
 </textarea>
+<div class="trivia">
+<p>The official implementation of GIT follows references recursively
+  and returns the <code>path/to/file</code> of the last file of the
+  form <code>ref: path/to/file</code>. In the example below,
+  <code>git symbolic-ref HEAD</code> would
+  <ul>
+    <li>read the file <code>proj/.git/HEAD</code> which contains <code>ref: refs/heads/main</code>,</li>
+    <li>follow that indirection and read the file <code>proj/.git/refs/heads/main</code> which contains <code>ref: refs/heads/other</code></li>
+    <li>follow that indirection and read the file <code>proj/.git/refs/heads/other</code> which contains a hash</li>
+    <li>return the last file path that contained a <code>ref:</code>, i.e. return the string <code>refs/heads/other</code></li>
+  </ul>
+<div id="example-recursive-ref"></div>
+<script class="example">
+  ___example('example-recursive-ref', function() {
+    var h2f = function(hash) { return 'proj/.git/objects/'+hash.substr(0,2)+'/'+hash.substr(2); }
+    var main = h2f(hash_object(true, 'blob', false, 'src/main.scm'));
+    var readme = h2f(hash_object(true, 'blob', false, 'README'));
+    var src = h2f(store_tree("src", ["main.scm"], []));
+    var proj = h2f(paths_to_tree(["README", "src/main.scm"]));
+    
+    var initial_commit_hash = store_commit(
+      paths_to_tree(["README", "src/main.scm"]),
+      [],
+      {name:'Ada', email:'ada@...', date:new Date(1617120803000), timezoneMinutes: +60},
+      {name:'Ada', email:'ada@...', date:new Date(1617120803000), timezoneMinutes: +60},
+      'Initial commit');
+    var initial_commit = h2f(initial_commit_hash);
+    
+    write('proj/.git/refs/heads/main', 'ref: refs/heads/other\n');
+    var main_branch = 'proj/.git/refs/heads/main';
+
+    git_branch('other', initial_commit_hash, true);
+    var other_branch = 'proj/.git/refs/heads/other';
+
+    git_init_head();
+    var head = 'proj/.git/HEAD';
+
+    document.getElementById('example-reference-head-hash').innerText = initial_commit_hash;
+    document.getElementById('example-reference-branch-hash').innerText = initial_commit_hash;
+
+    var previous_names = [ initial_commit ];
+    var names          = [ initial_commit, main_branch, other_branch, head ];
+    return { filesystem: filesystem, names: names, previous_names: previous_names }
+  });
+</script>
+</div>
 </section>
   
 <section id="git-rev-parse">
-<h1><code>git rev-parse</code></h1>  
+<h1><code>git rev-parse</code></h1>
 <textarea>
+console.log('hello', 'world', 3);
 function git_rev_parse(ref) {
   var symbolic_ref_target = git_symbolic_ref(ref);
   if (symbolic_ref_target) {
@@ -1052,11 +1118,12 @@ commands.</p>
 </section>
 
 <div id="toc"></div>
+<pre id="debug"></pre>
 </article>
 
 <script>
   (function() {
-      var script = '';
+      var script = ___script_log_header;
       var ta = document.getElementsByTagName('textarea');
       for (var j = 0; j < ta.length; j++) {
         if (ta[j] == document.getElementById('playground-reset')) {

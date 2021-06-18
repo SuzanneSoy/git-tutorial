@@ -472,6 +472,16 @@ function ___filesystem_to_table(fs, previous_filesystem) {
   for (var i = 0; i < entries.length; i++) {
     tbody.append(___format_entry(previous_filesystem, entries[i]));
   }
+  if (entries.length == 0) {
+    var tr_empty = document.createElement('tr');
+    tbody.append(tr_empty);
+
+    var td_empty = document.createElement('td');
+    tr_empty.append(td_empty);
+    td_empty.setAttribute('colspan', '2');
+    td_empty.classList.add('empty-filesystem');
+    td_empty.innerText = "The filesystem is empty."
+  }
   return table;
 }
 function ___filesystem_to_string(fs, just_table, previous_filesystem) {
@@ -514,21 +524,76 @@ function ___copyprintf_click(id) {
     elem.disabled = true;
   }
 }
-var global_filesystem=false;
+var ___script_log_header = ''
+  + 'var ___log = [];\n'
+  + 'var console = (function(real_console) {\n'
+  + '  return {\n'
+  + '    log: function() {\n'
+  + '      ___log[___log.length] = arguments;\n'
+  + '      real_console.log.apply(console, arguments);\n'
+  + '    },\n'
+  + '    assert: real_console.assert,\n'
+  + '  };\n'
+  + '})(window.console);\n'
+  + '\n';
+
+function ___eval_result_to_string(filesystem, previous_filesystem, log) {
+  return '<pre>' + log.map(function(l) { return l.map(function (x) { return x.toString(); }).join(', '); }).join('\n') + '</pre>'
+    + ___filesystem_to_string(filesystem, false, previous_filesystem);
+}
 function ___git_eval(current) {
   document.getElementById('hide-eval-' + current).style.display = '';
-  var script = '';
+  var script = ___script_log_header;
   for (i = 0; i <= current - 1; i++) {
     script += ___textarea_value(___global_editors[i]);
   }
-  script += "\n var ___previous_filesystem = {}; for (k in filesystem) { ___previous_filesystem[k] = filesystem[k]; }\n";
+  script += '\n'
+  + 'var ___previous_filesystem = {};\n'
+  + 'for (k in filesystem) { ___previous_filesystem[k] = filesystem[k]; }\n'
+  + '___log = [];\n';
   script += ___textarea_value(___global_editors[current]);
-  script += "\n document.getElementById('out' + current).innerHTML = ___filesystem_to_string(filesystem, false, ___previous_filesystem); filesystem;";
+  script += '\n'
+  + '"End of the script";\n'
+  + '\n'
+  + '\n'
+  + 'document.getElementById("out" + current).innerHTML = ___eval_result_to_string(filesystem, ___previous_filesystem, ___log);\n'
+  + 'filesystem;\n';
   try {
-    global_filesystem = eval(script);
+    document.getElementById('debug').innerText = script;
+    eval(script);
   } catch (e) {
+    // Stack traces usually include :line:column
+    var rx = /:([0-9][0-9]*):[0-9][0-9]*/g;
+    var linecol = rx.exec(''+e.stack);
+    var line = null;
+    if (linecol && linecol.length > 0) {
+      line=parseInt(linecol[1]);
+    } else {
+      // Some older versions of Firefox and probably some other browsers use just :line
+      var rx = /:([0-9][0-9]*)*/g;
+      var justline = rx.exec(''+e.stack);
+      if (justline && justline.length > 0) {
+        line=parseInt(justline[1], 10);
+      }
+    }
+    if (typeof(line) == 'number') {
+      var lines = script.split('\n');
+      if (line < lines.length) {
+        var from = Math.max(0, line-2);
+        var to = Math.min(lines.length - 1, line+2+1);
+        var showline = ''
+        + 'Possible location of the error: near line ' + line + '\n'
+        + '\n'
+        + lines.slice(from, to).map(function(l, i) { return '' + (from + i) + ': ' + l; }).join('\n')
+        + '\n'
+        + '\n';
+      }
+    } else {
+      var showline = 'Sorry, this tutorial could not pinpoint precisely\nthe location of the error.\n'
+                   + 'The stacktrace below may contain more information.\n'
+    }
     var error = ___specialchars("" + e + "\n\n" + e.stack);
-    document.getElementById('out' + current).innerHTML = '<pre class="error">' + error + '</pre>';
+    document.getElementById('out' + current).innerHTML = '<pre class="error">' + showline + error + '</pre>';
   }
 }
 
