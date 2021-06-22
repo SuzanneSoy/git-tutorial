@@ -1,3 +1,4 @@
 CodeMirror: https://codemirror.net/ license MIT
 sha1.js: https://www.movable-type.co.uk/scripts/sha1.html license MIT
-pako 2.0.3 https://github.com/nodeca/pako license (MIT AND Zlib)
+pako 2.0.3: pako.min.js from https://github.com/nodeca/pako license (MIT AND Zlib)
+Viz.js v2.1.2: viz.js and viz-lite.js from https://github.com/mdaines/viz.js license MIT

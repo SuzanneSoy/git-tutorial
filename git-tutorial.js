@@ -529,7 +529,7 @@ var ___script_log_header = ''
   + 'var console = (function(real_console) {\n'
   + '  return {\n'
   + '    log: function() {\n'
-  + '      ___log[___log.length] = arguments;\n'
+  + '      ___log[___log.length] = Array.from(arguments);\n'
   + '      real_console.log.apply(console, arguments);\n'
   + '    },\n'
   + '    assert: real_console.assert,\n'
@@ -537,8 +537,40 @@ var ___script_log_header = ''
   + '})(window.console);\n'
   + '\n';
 
+function ___file_contents_to_graphviz(s) {
+  try {
+    var inflated = pako.inflate(___stringToUint8Array(s));
+  } catch(e) {
+    var inflated = false;
+  }
+  if (inflated) {
+    var id=___global_unique_id++;
+    return {
+      html:
+        '<span id="deflated'+id+'-pretty">'
+      + '<span class="deflated">deflated:</span>'
+      + ___specialchars_and_colour_and_hex(___uint8ArrayToString(inflated))
+      + '</span>'
+      + '<span id="deflated'+id+'-raw" style="display:none">'
+      + ___specialchars_and_colour_and_hex(s)
+      + '</span>',
+      td: function(td) { td.classList.add('deflate-toggle'); td.setAttribute('onclick', '___deflated_click('+id+')'); }
+    };
+  } else {
+    return { html: ___specialchars_and_colour_and_hex(s), td: function() {} };
+  }
+}  
+
+function ___filesystem_to_graphviz(filesystem, previous_filesystem) {
+  return "digraph graph_view {"
+  + 'a -> b'
+  + "}";
+}
+
 function ___eval_result_to_string(filesystem, previous_filesystem, log) {
-  return '<pre>' + log.map(function(l) { return l.map(function (x) { return x.toString(); }).join(', '); }).join('\n') + '</pre>'
+  var loghtml = '<pre class="log">' + log.map(function(l) { return l.map(function (x) { return x.toString(); }).join(', '); }).join('\n') + '</pre>'
+  return (log.length > 0 ? '<p>Console output:</p>' + loghtml : '')
+    + Viz(___filesystem_to_graphviz(filesystem, previous_filesystem), "svg")
     + ___filesystem_to_string(filesystem, false, previous_filesystem);
 }
 function ___git_eval(current) {
@@ -559,7 +591,6 @@ function ___git_eval(current) {
   + 'document.getElementById("out" + current).innerHTML = ___eval_result_to_string(filesystem, ___previous_filesystem, ___log);\n'
   + 'filesystem;\n';
   try {
-    document.getElementById('debug').innerText = script;
     eval(script);
   } catch (e) {
     // Stack traces usually include :line:column

@@ -2,12 +2,18 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>GIT tutorial</title>
+
+<!-- Third-party libraries: -->
 <link rel="stylesheet" href="codemirror-5.60.0/lib/codemirror.css">
 <script src="codemirror-5.60.0/lib/codemirror.js"></script>
 <script src="codemirror-5.60.0/mode/javascript/javascript.js"></script>
 <script src="sha1.js"></script>
 <script src="pako.min.js"></script>
+<script src="viz.js"></script>
+<script src="lite.render.js"></script>
 <link rel="stylesheet" href="codemirror-5.60.0/lib/codemirror.css">
+
+<!-- Implementation of the tutorial's helper tools (code editor, graph view, table of contents, table output and arrows): -->
 <link rel="stylesheet" href="git-tutorial.css">
 <script src="git-tutorial.js"></script>
 <script class="example">
@@ -41,6 +47,7 @@ function ___example(id, f) {
   <li><a href="https://codemirror.net/">CodeMirror</a>, released under the MIT license</li>
   <li><a href="https://www.movable-type.co.uk/scripts/sha1.html">sha1.js</a>, released under the MIT license</li>
   <li><a href="https://github.com/nodeca/pako">pako 2.0.3</a>, released under the MIT and Zlib licenses, see the project page for details.</li>
+  <li><a href="https://github.com/mdaines/viz.js">Viz.js</a> (<a href="https://github.com/mdaines/viz.js/releases/tag/v1.8.2">v1.8.2</a> which has a synchronous API), released under the MIT license</li>
 </ul>
 
 <section id="introduction">
@@ -73,7 +80,7 @@ var current_directory = '';
 </section>
 
 <section id="os-filesystem-functions">
-<h1>Filesystem access functions<span class="notoc"> (<code>read</code>, <code>write</code>, <code>mkdir</code>, <code>exists</code>, <code>cd</code>)</span></h1>
+<h1>Filesystem access functions<span class="notoc"> (<code>read</code>, <code>write</code>, <code>mkdir</code>, <code>exists</code>, <code>remove</code>, <code>cd</code>)</span></h1>
 <p>The filesystem exposes functions to read an entire file, create or
   replace an entire file, create a directory, test the existence of a filesystem entry, and change the current directory.</p>
 <textarea id="in1">
@@ -96,6 +103,16 @@ function mkdir(dirname) {
 function cd(dirname) {
   current_directory = dirname;
 }
+
+function remove(path, recursive) {
+  if (recursive && filesystem[path] === null) {
+    var children = listdir(path);
+    for (var i = 0; i < children.length; i++) {
+      remove(path + '/' + children[i], true);
+    }
+  }
+  delete filesystem[path];
+}
 </textarea>
 </section>
 
@@ -105,12 +122,18 @@ function cd(dirname) {
 directory.</p>
 <textarea id="in2">
 function listdir(dirname) {
-  var depth = dirname.split('/').length + 1;
-  var descendents = filesystem
-      .filter(function (filename) { return filename.startsWith(dirname + '/'); });
+  var depth = dirname.split('/').length;
+  // Get all paths in the filesystem
+  var paths = Object.keys(filesystem);
+  // Filter to keep only the paths starting with the given dirname
+  var prefix = dirname + '/';
+  var descendents = paths
+      .filter(function (filename) { return filename.startsWith(prefix) && (filename.length > prefix.length); });
+  // Keep only the next path component
   var children = descendents
       .map(function (filename) { return filename.split('/')[depth]; });
-  // remove duplicates:
+  // remove duplicates, listdir('a') with paths a/b/c and a/b/d and a/x
+  // should only return ['b', 'x'], not 'b', 'b', x.
   return Array.from(new Set(children));
 }
 </textarea>
@@ -505,8 +528,12 @@ initial_commit = store_commit(
 <section id="resolving-references">
 <h1>resolving references</h1>
 
-<p>The next few sections will introduce <em>symbolic references</em>
-like branch names, the special name <code>HEAD</code> or tag names.</p>
+<p>The next few subsections will introduce <em>symbolic references</em>
+and other references like branch names, the special name <code>HEAD</code>
+or tag names.</p>
+
+<p>Most GIT commands accept as an argument a commit hash or a named reference to a hash.
+In order to implement those, we need to be able to resolve these references first.</p>
 
 <p>Symbolic references are nothing more than regular files containing a hexadecimal
 hash or a string of the form <code>ref: path/to/other/symbolic/reference</code>.
@@ -645,8 +672,11 @@ function git_symbolic_ref(ref) {
   
 <section id="git-rev-parse">
 <h1><code>git rev-parse</code></h1>
+<p><code>git rev-parse</code> is another low-level command. It takes a symbolic reference or other reference,
+and returns the hash. The difference with <code>git symbolic-ref</code> is that <code>symbolic-ref</code> follows indirections
+to other references, and returns the last named reference in the chain of indirections, whereas <code>rev-parse</code>
+goes one step further and returns the hash pointed to by the last named reference.</p>
 <textarea>
-console.log('hello', 'world', 3);
 function git_rev_parse(ref) {
   var symbolic_ref_target = git_symbolic_ref(ref);
   if (symbolic_ref_target) {
@@ -678,9 +708,11 @@ function git_rev_parse(ref) {
 
 <section id="git-branch">
 <h1><code>git branch</code></h1>
+
 <p>A branch is a pointer to a commit, stored in a file in <code>.git/refs/heads/name_of_the_branch</code>.
-  The branch can be overwritten with <code>git branch -f</code>. Also, as will be explained later,
-  <code>git commit</code> can update the pointer of a branch.</p>
+The branch can be overwritten with <code>git branch -f</code>. Also, as will be explained later,
+<code>git commit</code> can update the pointer of a branch.</p>
+
 <textarea id="in14">
 function git_branch(branch_name, commit_ref, force) {
   var commit_hash = git_rev_parse(commit_ref);
@@ -694,7 +726,48 @@ function git_branch(branch_name, commit_ref, force) {
     return true;
   }
 }
+</textarea>
 
+<p>When we call <code>git branch main HEAD</code> or equivalently
+<code>git branch main <span id="example-git-branch-head-hash">0123456789012345678901234567890123456789</span></code>,
+a file containing that hash is created in <code>.git/refs/heads/main</code>. This file acts as a pointer
+to the branch, and this pointer can be read e.g. by <code>git rev-parse</code>.</p>
+
+<div id="example-git-branch"></div>
+<script class="example">
+  ___example('example-git-branch', function() {
+    var h2f = function(hash) { return 'proj/.git/objects/'+hash.substr(0,2)+'/'+hash.substr(2); }
+    var main = h2f(hash_object(true, 'blob', false, 'src/main.scm'));
+    var readme = h2f(hash_object(true, 'blob', false, 'README'));
+    var src = h2f(store_tree("src", ["main.scm"], []));
+    var proj = h2f(paths_to_tree(["README", "src/main.scm"]));
+    
+    var initial_commit_hash = store_commit(
+      paths_to_tree(["README", "src/main.scm"]),
+      [],
+      {name:'Ada', email:'ada@...', date:new Date(1617120803000), timezoneMinutes: +60},
+      {name:'Ada', email:'ada@...', date:new Date(1617120803000), timezoneMinutes: +60},
+      'Initial commit');
+    var initial_commit = h2f(initial_commit_hash);
+    
+    git_branch('main', initial_commit_hash, true);
+    var main_branch = 'proj/.git/refs/heads/main';
+
+    //git_init_head();
+    //var head = 'proj/.git/HEAD';
+
+    document.getElementById('example-git-branch-head-hash').innerText = initial_commit_hash;
+
+    var previous_names = [ main, readme, src, proj, initial_commit ];
+    var names          = [ main, readme, src, proj, initial_commit, main_branch ];
+    return { filesystem: filesystem, names: names, previous_names: previous_names }
+  });
+</script>
+
+<p>After creating the branch, we show how the file <code>.git/refs/heads/main</code> can be overwritten
+using <code>git branch -f</code></p>
+
+<textarea id="inex14">
 // git branch main 0123456789012345678901234567890123456789
 git_branch('main', initial_commit, false);
 
@@ -706,7 +779,7 @@ git_branch('main', initial_commit, true);
 <section id="HEAD">
 <h1><code>HEAD</code></h1>
 <p>
-  The HEAD indicates the "current" commit. It is set at first as part of the <code>git init</code> routine.
+  The <code>HEAD</code> indicates the "current" commit. It is set at first as part of the <code>git init</code> routine.
 </p>
 <textarea id="in15">
 function git_init_head() {
@@ -715,13 +788,98 @@ function git_init_head() {
 
 git_init_head();
 </textarea>
+
+<p>
+  Usually, the <code>HEAD</code> is a symbolic reference to a branch, i.e. the
+  file <code>.git/HEAD</code> contains <code>ref: refs/heads/name-of-branch</code>.
+  When checking out a commit by specifying its hash directly, or when checking out
+  a non-branch reference, the file <code>.git/HEAD</code> contains the hash of the
+  commit instead.
+</p>
+
+<p>
+  The state in which <code>.git/HEAD</code> contains a commit hash is called
+  "detached HEAD", and often sounds alarming to people who have not encountered this
+  before. As we will see in the following sections, the only difference between detached
+  HEAD and the normal state is that <code>git commit</code> updates the branch to point
+  to the new commit in the normal mode of operation. When the <code>HEAD</code> is detached,
+  it does not point to a specific branch, and <code>git commit</code> updates the HEAD
+  directly instead, overwriting it with the new commit hash.
+</p>
+
+<p>
+  Since the HEAD is supposed to be a transient pointer, it is easy to lose track of the hash of
+  an important commit. For example, the following sequence of operations:
+  
+  <pre>
+git checkout 0123456789abcdef0123456789abcdef01234567
+
+touch new_file
+git add new_file
+git commit -m 'This is a commit adding a new file'
+
+git checkout branch-of-feature-foobar
+  </pre>
+
+  roughly means:
+
+  <pre>
+HEAD = 0123456789abcdef0123456789abcdef01234567
+// overwrite the contents of the working directory with
+// the contents of commit 0123456789abcdef0123456789abcdef01234567
+checkout(0123456789abcdef0123456789abcdef01234567)
+
+// create commit with the new file:
+HEAD = commit(…)
+
+// Checkout other branch
+HEAD = git_rev_parse('branch-of-feature-foobar')
+  </pre>
+</p>
+
+<p>
+  The hash of the new commit which is stored in HEAD on the second step is overwritten
+  in the third step. In order to later retrieve that specific version with the precious
+  new_file, one needs that hash. It would be possible to note down these hashes in a
+  simple text file, but GIT offers a mechanism for that: branches. After all, branches are
+  merely named text files containing the hash of the latest commit in that line of work.
+</p>
+
+<p>
+  The hash of a commit created with <code>git commit</code> does not only exist in the
+  HEAD file (when in detached HEAD) or in the current branch file (normal mode). The official
+  implementation of GIT keeps a log of the changes being made to the various references.
+  <code>.git/logs/HEAD</code> contains a log of the hashes pointed to by <code>.git/HEAD</code>,
+  and <code>.git/logs/refs/heads/main</code> contains a log of the hashes pointed to by
+  <code>.git/refs/heads/main</code>, and the commands <code>git reflog</code> and
+  <code>git reflog main</code> pretty-print these files.
+</p>
+
+<p>
+  There are a few more ways to find a lost commit hash, including a careful invocation of
+  <code>git fsck</code> which checks that the files stored in <code>.git/</code> are not
+  corrupted, and that no reference (to another reference or a commit, tree or blob) points
+  to a non-existing file. The <code>git fsck --unreachable</code> option tells this command
+  to print all object hashes which are not pointed to indirectly by any named reference
+  (so-called unreachable objects, which are well-formed but are not indirectly linked to
+  from a branch or other kind of named pointer).
+</p>
+
+<p>
+  The reflog can be used to recover a lost hash but handling hashes manually like this is
+  somewhat error-prone, and most new users are not aware of those features; for this reason
+  GIT commands tend to display a warning when switching to a detached HEAD state.
+</p>
 </section>
 
-<section id="git-commit">
-<h1><code>git commit</code></h1>
-<p>If the <code>HEAD</code> points to a commit hash, then <code>git commit</code> updates the <code>HEAD</code> to point to the new commit.
-  Otherwise, when the <code>HEAD</code> points to a branch, then the target branch (represented by a file named <code>.git/refs/heads/the_branch_name</code>) is updated.</p>
-<textarea id="in16">
+
+<section id="git-config">
+  <h1>git config</h1>
+  <p>
+    The official implementation of GIT stores the settings in various files (<code>.git/config</code> within a repository,
+    <code>~/.gitconfig</code> in the user's home folder, and several other places).
+  </p>
+  <textarea id="in16">
 var gitconfig = {
   user: {
     name: 'Ada Lovelace',
@@ -730,6 +888,30 @@ var gitconfig = {
 };
 var $EDITOR = function() { return window.prompt('Commit message:'); }
 </textarea>
+  <p>
+    These files use a <code>.ini</code> syntax
+    with <code>key = value</code> lines grouped under some <code>[section]</code> headings. The configuration above could be
+    stored in <code>~/.gitconfig</code> or <code>.git/config</code> using the following syntax:
+  </p>
+  <pre>
+[user]
+name = Ada Lovelace
+email = ada@analyti.cal
+</pre>
+  <p>
+    The <code>$EDITOR</code> variable is a traditional *NIX environment variable, and could e.g. be declared with
+    <code>EDITOR=nano</code> in <code>~/.profile</code> or <code>~/.bashrc</code>.
+  </p>
+</section>
+
+<section id="git-commit">
+<h1><code>git commit</code></h1>
+
+<p>
+  The <code>git commit</code> command stores a commit (metadata and a pointer to a tree
+  containing the files given on the command-line), and updates the <code>HEAD</code> or
+  current branch to point to the new commit.
+</p>
 <textarea>
 function git_commit(file_paths, message) {
   var now = new Date();
@@ -746,13 +928,17 @@ function git_commit(file_paths, message) {
     {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
     message || $EDITOR());
 
-  advance_head(new_commit_hash);
+  advance_head_or_branch(new_commit_hash);
 
   return new_commit_hash;
 }
 </textarea>
+
+<p>If the <code>HEAD</code> points to a commit hash, then <code>git commit</code> updates the <code>HEAD</code> to point to the new commit.
+  Otherwise, when the <code>HEAD</code> points to a branch, then the target branch (represented by a file named <code>.git/refs/heads/the_branch_name</code>) is updated.</p>
+
 <textarea>
-function advance_head(new_commit_hash) {
+function advance_head_or_branch(new_commit_hash) {
   var referenced_branch = git_symbolic_ref('HEAD');
   if (referenced_branch) {
     // Update the target of the ref:
@@ -763,6 +949,24 @@ function advance_head(new_commit_hash) {
   }
 }
 </textarea>
+
+<p>
+  The official implementation of <code>git commit</code> makes use of <a href="#index">the index</a>.
+  When a file is scheduled for the next commit using <code>git add path/to/file</code>, it is added to
+  the index. The index is a representation of a collection of copies of files, which can efficiently be
+  compared to the working directory. It uses a different representation, but its role is very similar
+  to that of a tree object along with the subtrees and blob objects of individual files. When
+  <code>git commit</code> is called without specifying any files, it creates a commit containing the
+  version of the files stored in the index.
+</p>
+<p>
+  In this simplified implementation, we only support creating commits by specifying all the files that
+  must be present in the commit (including unchanged files). This contrasts with the official implementation
+  which would create a tree containing the files from the current HEAD, as well as the added, modified or
+  deleted files specified by <code>git add</code> or specified directly on the <code>git commit</code>
+  command-line.
+</p>
+
 <textarea>
 write('proj/README', 'This is my Scheme project -- with updates!');
 var second_commit = git_commit(['README', 'src/main.scm'], 'Some updates');
@@ -771,7 +975,7 @@ var second_commit = git_commit(['README', 'src/main.scm'], 'Some updates');
 
 <section id="git-tag">
 <h1><code>git tag</code></h1>
-<p>Tags are like branches, but are stored in <code>.git/refs/tags/the_tag_name</code>
+<p>Tags behave like branches, but are stored in <code>.git/refs/tags/the_tag_name</code>
   and a tag is not normally modified. Once created, it's supposed to always point
   to the same version.</p>
 <p>GIT does offer a <code>git tag -f existing-tag new-hash</code> command,
@@ -788,7 +992,24 @@ function git_tag(tag_name, commit_hash, force) {
     return true;
   }
 }
-
+</textarea>
+<p>Intuitively, tags differ from branches in the following way: when checking out a branch,
+  and a subsequent commit is made, the branch is updated to point to the new commit's hash.
+  As we've seen in the implementation of <code>git commit</code>, the difference is actually
+  in the contents of the <code>.git/HEAD</code> file. If it is a symbolic reference (generally
+  a pointer to a branch), then the target of that reference is updated every time a new commit
+  is created. If the <code>.git/HEAD</code> file contains the hash of a commit, then the
+  <code>.git/HEAD</code> file itself is updated every time a new commit is created.
+</p>
+<p>
+  Therefore, tags and branches differ only in their usage and in the path under which they are
+  stored (<code>.git/refs/heads/name-of-the-branch</code> vs. <code>.git/refs/tags/name-of-the-tag</code>).
+  The file <code>.git/HEAD</code> is overwritten by <code>git commit</code> and <code>git checkout</code>.
+  It is the latter command which will behave differently for tags and branches; <code>git checkout branch-name</code>
+  turns the HEAD into a symbolic reference, whereas <code>git checkout tag-name</code> resolves the tag name to
+  a commit hash, and writes that hash directly into <code>.git/HEAD</code>.
+</p>
+<textarea id="inex17">
 // git tag v1.0 0123456789012345678901234567890123456789
 git_tag('v1.0', second_commit);
 </textarea>
@@ -797,11 +1018,10 @@ git_tag('v1.0', second_commit);
 <section id="git-checkout">
 <h1><code>git checkout</code></h1>
 <section id="checkout-branch-vs-other">
-<h1>Checkout, branches and other references</h1>
-<p>More importantly, the HEAD does not normally point to a tag. Although nothing actually
-  prevents writing <code>ref: refs/tags/v1.0</code> into <code>.git/HEAD</code>, the GIT
-  commands will not automatically do this. For example, <code>git checkout tag-or-branch-or-hash</code>
-  will put a symbolic <code>ref: </code> in <code>.git/HEAD</code> only if the argument is a branch.</p>
+<p>
+  The <code>git checkout commit-hash-or-reference</code> command modifies the HEAD to point to the given commit,
+  and modifies the working directory to match the contents of the tree object pointed to by that commit.
+</p>
 <textarea id="in18">
 function git_checkout(tag_or_branch_or_hash) {
   if (exists(join_paths(current_directory, '.git/refs/heads/' + tag_or_branch_or_hash))) {
@@ -814,10 +1034,29 @@ function git_checkout(tag_or_branch_or_hash) {
   checkout_files(git_rev_parse('HEAD'));
 }
 </textarea>
+<h1>Checkout, branches and other references</h1>
+<p>The HEAD does not normally point to a tag. Although nothing actually
+  prevents writing <code>ref: refs/tags/v1.0</code> into <code>.git/HEAD</code>, the GIT
+  commands will not automatically do this. For example, <code>git checkout tag-or-branch-or-hash</code>
+  will put a symbolic <code>ref: </code> in <code>.git/HEAD</code> only if the argument is a branch.</p>
 </section>
 
 <section id="checkout-files">
 <h1>Checking out files</h1>
+<p>
+  In order to replace the contents of the working directory with those of the given commit, we
+  recursively compare the subtrees, deleting from the working directory the files or directories
+  that are not present in the tree object, and overwriting the others.
+</p>
+<p>
+  The official implementation of GIT will record the diff between the current working directory
+  and the current commit, and will re-apply these changes on top of the freshly checked-out commit.
+  The official <code>git checkout</code> command will print warnings and refuse to proceed when
+  these changes cannot be re-applied without conflict, encouraging the user to create a commit
+  containing this updated version or to stash the changes (effectively creating a temporary commit
+  containing this version, pointed to by <code>.git/refs/stash</code>). Our simple implementation
+  will always overwrite the changes.
+</p>
 <textarea>
 function checkout_files(hash) {
   var commit = parse_commit(hash);
@@ -826,6 +1065,19 @@ function checkout_files(hash) {
 
 function checkout_tree(path_prefix, hash) {
   var entries = parse_tree(hash);
+  var entries_names = entries.map(function (entry) { return entry.name; });
+  
+  var working_directory_contents = listdir(path_prefix);
+  
+  for (var i = 0; i < working_directory_contents.length; i++) {
+    if (entries_names.indexOf(working_directory_contents[i]) == -1
+        && working_directory_contents[i] != '.git') {
+      // The file or directory exists in the working directory, but
+      // not in the commit that is being checked out, remove it recursively.
+      remove(join_paths(path_prefix, working_directory_contents[i]), true);
+    }
+  }
+  
   for (var i = 0; i < entries.length; i++) {
     var o = parse_object(entries[i].hash);
     var entry_path = join_paths(path_prefix, entries[i].name);
@@ -841,7 +1093,10 @@ function checkout_tree(path_prefix, hash) {
 
 <section id="parse-assert">
 <h1>Assert</h1>
-The parsers will check that their input looks reasonably well-formed, using <code>assert()</code>.
+<p>
+  The <code>checkout_tree()</code> function needs to read the commit, tree and blob objects from the
+  <code>.git/</code> folder. The following sections will introduce some parsers for these objects.
+  The parsers will check that their input looks reasonably well-formed, using <code>assert()</code>.</p>
 <textarea>
 function assert(boolean, text) {
   if (! boolean) { alert("assertion failed: " + text); throw new Error(text); }
@@ -1099,6 +1354,46 @@ folder is bit-compatible with the official <code>git log</code>, <code>git statu
 commands.</p>
 </section>
 
+<section id="suggested-exercises">
+  <h1>Suggested exercises</h1>
+  <p>
+    The reader willing to improve their grasp of GIT's mental model, and reduce their reliance on a few learned recipies, might
+    be interested in the following warm-up exercises:
+  </p>
+  <ul>
+    <li>
+      Inspect an existing repository, starting with <code>cat .git/HEAD</code> and using <code>git cat-file -p some-hash</code>
+      to pretty-print an object given its hash.
+    </li>
+    <li>
+      Inspect an existing repository, starting with <code>cat .git/HEAD</code> and using the <code>zlib</code> decompression tool
+      from the <a href=#zlib-compression-note><code>zlib</code> compression</a> section.
+    </li>
+    <li>
+      Run <code>git init new-directory</code> in a terminal, and create an initial single-file commit from scratch, using only
+      <code>git hash-object</code>, <code>printf</code> and overwriting <code>.git/HEAD</code>. This will involve retracing the
+      steps in this tutorial to create a blob object for the file, a tree object to be the directory containing just that file,
+      and a commit object.
+    </li>
+    <li>
+      For a couple of weeks, only use the GIT commands <code>commit</code>, <code>diff</code>, <code>checkout</code>,
+      <code>merge</code>, <code>cherry-pick</code>, <code>log</code>, <code>clone</code>, <code>fetch</code> and
+      <code>push remote hash-of-commit:refs/heads/name-of-the-branch</code>. In particular, don't use <code>rebase</code>
+      which is just a wrapper around a sequence of <code>cherry-pick</code> commands, don't use <code>pull</code> which is
+      just a wrapper around <code>fetch</code> and <code>merge</code>, don't use <code>git push</code> as-is and instead
+      explicitly give the name (origin) or URL of the remote, the hash of the commit to push, and the path that should be
+      updated on the remote (<code>git push</code> while the <code>main</code> branch is checked out locally is equivalent
+      to <code>git push origin HEAD:refs/heads/main</code>, where <code>HEAD</code> can be replaced by the actual hash of
+      the commit).
+    </li>
+    <li>
+      Try not even using <code>git cherry-pick</code> or <code>git diff</code> a few times, instead make two copies the git
+      directoy, check out the two different commits in each copy, and use the traditional *NIX commands <code>diff</code> and
+      <code>patch</code>.
+    </li>
+  </ul> 
+</section>
+
 <section id="conclusion">
 <h1>Conclusion</h1>
 <p>This article shows that a large part of the core of GIT can be re-implemented in <span class="loc-count">a few</span> source lines of code* (<a href="javascript:___copy_all_code(); void(0);">copy all the code</a>).
@@ -1118,7 +1413,6 @@ commands.</p>
 </section>
 
 <div id="toc"></div>
-<pre id="debug"></pre>
 </article>
 
 <script>
