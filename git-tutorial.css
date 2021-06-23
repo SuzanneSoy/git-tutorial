@@ -7,13 +7,14 @@ article#git-tutorial { position: absolute; top:0; left:0.5em; transition: right,
 #git-tutorial textarea, #git-tutorial .CodeMirror { width: 100%; font-size: 1.2rem; border: thin solid black; }
 #git-tutorial table { table-layout: fixed; width: 100%; font-size: 100%; font-family: monospace; min-width: 41em; }
 #git-tutorial pre.log { border: thin solid gray; padding: 0.3em; font-size: 100%; font-family: monospace; box-sizing: border-box; }
+#git-tutorial .graph-view { font-size: 100%; font-family: monospace; }
 #git-tutorial td.cell-contents, #git-tutorial th.cell-contents { font-family: monospace; }
 article#git-tutorial p, article#git-tutorial h1 { max-width: 63rem; }
 
 #git-tutorial td, #git-tutorial th { padding-left: 0.3em; padding-right: 0.3em; }
 #git-tutorial td.cell-contents, #git-tutorial th.cell-contents { width: 36em; }
 article#git-tutorial { left: calc(50% - ( 17.4em / 2 ) - ( 63rem / 2 ) ); right:18.4em; max-width: 63rem; }
-article#git-tutorial table, #git-tutorial pre.log { width: 77rem; margin-left: calc( ( ( 63rem - 77rem ) / 2 ) ); }
+article#git-tutorial table, #git-tutorial pre.log, #git-tutorial .graph-view { width: 77rem; margin-left: calc( ( ( 63rem - 77rem ) / 2 ) ); }
 #git-tutorial #toc { right:0; }
 #git-tutorial #toc:hover { border-left: 1px solid gray; }
 
@@ -21,7 +22,7 @@ article#git-tutorial table, #git-tutorial pre.log { width: 77rem; margin-left: c
     #git-tutorial td, #git-tutorial th { padding-left: 0.3em; padding-right: 0.3em; }
     #git-tutorial td.cell-contents, #git-tutorial th.cell-contents { width: 36em; }
     article#git-tutorial { left:0.5em; right:18.4em; max-width: 63rem; }
-    article#git-tutorial table, #git-tutorial pre.log { width: 100%; margin-left: auto; }
+    article#git-tutorial table, #git-tutorial pre.log, #git-tutorial .graph-view { width: 100%; margin-left: auto; }
     #git-tutorial #toc { right:0; }
     #git-tutorial #toc:hover { border-left: 1px solid gray; }
 }
@@ -30,7 +31,7 @@ article#git-tutorial table, #git-tutorial pre.log { width: 77rem; margin-left: c
     #git-tutorial td, #git-tutorial th { padding-left: 0; padding-right: 0; }
     #git-tutorial td.cell-contents, #git-tutorial th.cell-contents { width: 34em; }
     article#git-tutorial { left:0.5em; right: 7em; max-width: 63rem; }
-    article#git-tutorial table, #git-tutorial pre.log { width: 100%; margin-left: auto; }
+    article#git-tutorial table, #git-tutorial pre.log, #git-tutorial .graph-view { width: 100%; margin-left: auto; }
     #git-tutorial #toc { right: -11em; }
     #git-tutorial #toc:hover { border-left: 5px solid gray; }
 }
@@ -39,7 +40,7 @@ article#git-tutorial table, #git-tutorial pre.log { width: 77rem; margin-left: c
     #git-tutorial td, #git-tutorial th { padding-left: 0; padding-right: 0; }
     #git-tutorial td.cell-contents, #git-tutorial th.cell-contents { width: 30em; }
     article#git-tutorial { left:0.5em; right:6em; max-width: 63rem; }
-    article#git-tutorial table, #git-tutorial pre.log { width: 100%; margin-left: auto; }
+    article#git-tutorial table, #git-tutorial pre.log, #git-tutorial .graph-view { width: 100%; margin-left: auto; }
     #git-tutorial #toc { right: -12em; }
     #git-tutorial #toc:hover { border-left: 5px solid gray; }
 }
@@ -96,3 +97,16 @@ article#git-tutorial .onlytoc { display: none; }
 #git-tutorial .trivia:before { content: "Trivia"; border-bottom: thin solid slategrey; display: block; text-align: center; }
 #git-tutorial .trivia table { min-width: 90%; max-width: 90%; width: 90%; margin-left: auto; margin-right: auto; }
 /*#git-tutorial .trivia table td.cell-contents, #git-tutorial .trivia table th.cell-contents { width: 30%; }*/
+
+/* Graph view */
+
+#git-tutorial .dimmed_previous:hover [stroke] { stroke: black; }
+#git-tutorial .dimmed_previous:hover [fill=#c0c0c0] { fill: black; }
+#git-tutorial .graph-view { text-align: center; }
+#git-tutorial .graph-view-tooltips { white-space: nowrap; margin: 1em 0.3em; background: #f8f8f8; border: thin solid #444; text-align: left; }
+#git-tutorial .graph-view-tooltips > * { display: inline-block; white-space: normal; width: 100%; margin-right: -100%; vertical-align: middle; }
+#git-tutorial .graph-view-tooltips table { margin-left: auto; width: 100%; border: none }
+#git-tutorial .graph-view-tooltips tr { border: none; }
+#git-tutorial .graph-view-tooltips tr th { opacity: 1; border: none; border-bottom:thin solid #444; text-align: left; }
+#git-tutorial .graph-view-tooltips tr td { opacity: 1; border: none; border-top:thin solid: #444; }
+#git-tutorial .graph-view-tooltips > .graph-view-tooltips-default { color: #444; text-align: center; }

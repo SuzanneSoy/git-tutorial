@@ -10,7 +10,6 @@
 <script src="sha1.js"></script>
 <script src="pako.min.js"></script>
 <script src="viz.js"></script>
-<script src="lite.render.js"></script>
 <link rel="stylesheet" href="codemirror-5.60.0/lib/codemirror.css">
 
 <!-- Implementation of the tutorial's helper tools (code editor, graph view, table of contents, table output and arrows): -->
@@ -30,7 +29,7 @@ function ___example(id, f) {
     for (var i = 0; i < result.previous_names.length; i++) {
       previous_fs[result.previous_names[i]] = filesystem[result.previous_names[i]];
     }
-    document.getElementById(id).innerHTML = ___filesystem_to_string(fs, true, previous_fs);
+    ___eval_result_to_html(id, fs, previous_fs, [], true);
   });
 }
 </script>

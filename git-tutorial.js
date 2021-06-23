@@ -13,6 +13,7 @@ function ___uint8ArrayToString(a) {
   }
   return s.join('');
 }
+// Convert bytes to hex
 function ___to_hex(s) {
   var s = String(s);
   var hex = ""
@@ -99,9 +100,10 @@ function ___hilite_off() {
 }
 function ___scroll_to_dest(srcid, destclass) {
   var src = document.getElementById(srcid);
-  var wrapper = src;
-  while (wrapper && !wrapper.classList.contains('hilite-wrapper')) { wrapper = wrapper.parentElement; }
-  var dests = (wrapper || document).getElementsByClassName(destclass);
+
+  var wrapper_and_dests = get_wrapper_and_dests(src, destclass);
+  var dests = wrapper_and_dests.dests;
+
   if (dests.length > 0) {
     dest = dests[dests.length - 1];
     while (dest && dest.tagName.toLowerCase() != 'tr') { dest = dest.parentElement; }
@@ -119,12 +121,28 @@ function ___scroll_to_dest(srcid, destclass) {
   }
   return false;
 }
+function get_wrapper_and_dests(src, destclass) {
+  var wrapper = src;
+  while (wrapper && !wrapper.classList.contains('hilite-wrapper')) { wrapper = wrapper.parentElement; }
+  var maybe_dests = (wrapper || document).getElementsByClassName(destclass);
+  var dests = [];
+  for (var i = 0; i < maybe_dests.length; i++) {
+    var nodest = maybe_dests[i];
+    while (nodest && !nodest.classList.contains('hilite-nodest')) { nodest = nodest.parentElement; }
+    if (nodest) {
+      // skip this as a destination for an arrow or for scrolling
+    } else {
+      dests.push(maybe_dests[i]);
+    }
+  }
+  return { wrapper: wrapper, dests: dests };
+}
 function ___hilite(srcid, destclass) {
   ___hilite_off();
   var src = document.getElementById(srcid);
-  var wrapper = src;
-  while (wrapper && !wrapper.classList.contains('hilite-wrapper')) { wrapper = wrapper.parentElement; }
-  var dests = (wrapper || document).getElementsByClassName(destclass);
+  var wrapper_and_dests = get_wrapper_and_dests(src, destclass);
+  var wrapper = wrapper_and_dests.wrapper;
+  var dests = wrapper_and_dests.dests;
 
   // circumvent glitch where the codemirror areas seem to resize themselves
   // which causes the arrow to be misaligned. Instead of using a global container for lines:
@@ -247,30 +265,39 @@ function ___hex_hash(s) {
             + ___specialchars_and_colour(s.substr(20) /* should be empty unless there's a bug */);
 }
 function ___specialchars_and_colour_and_hex(s) {
+  var target_hashes = [];
   if (s.substr(0,5) == "tree ") {
     var sp = s.split('\0');
     sp[0] = ___specialchars_and_colour(sp[0]);
     sp[1] = ___specialchars_and_colour(sp[1]);
     for (i = 2; i < sp.length; i++) {
+      target_hashes.push(___to_hex(sp[i].substr(0,20)));
       sp[i] = ___hex_hash(sp[i].substr(0,20))
             + ___specialchars_and_colour(sp[i].substr(20));
     }
-    return sp.join('<span class="specialchar newline">\\000</span>');
+    var html = sp.join('<span class="specialchar newline">\\000</span>');
+    return { target_hashes: target_hashes, html: html };
   } else if (/^[0-9a-f]{40}\n$/.test(s)) {
-    var id=___global_unique_id++;
-    var hash = "object-hash-"+s.substr(0,40);
-    return '<span id="'+id+'" class="plain-hash-or-ref" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
-            + s.substr(0,40)
-            + '</span>'
-            + ___specialchars_and_colour(s.substr(40));
+    var id = ___global_unique_id++;
+    var h = s.substr(0,40);
+    target_hashes.push(h);
+    var hash = "object-hash-"+h;
+    var html = '<span id="'+id+'" class="plain-hash-or-ref" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
+             + s.substr(0,40)
+             + '</span>'
+             + ___specialchars_and_colour(s.substr(40));
+    return { target_hashes: target_hashes, html: html };
   } else if (/^ref: refs\/[^\n]*\n$/.test(s)) {
-    var id=___global_unique_id++;
-    var hash = "object-hash-"+s.substr(5, s.length-6);
-    return s.substr(0,5)
-           + '<span id="'+id+'" class="plain-hash-or-ref" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
-           + ___specialchars_and_colour(s.substr(5, s.length-6))
-           + '</span>'
-           + ___specialchars_and_colour(s.substr(s.length-1));
+    var id = ___global_unique_id++;
+    var h = s.substr(5, s.length-6)
+    target_hashes.push(h);
+    var hash = "object-hash-"+h;
+    var html = s.substr(0,5)
+             + '<span id="'+id+'" class="plain-hash-or-ref" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
+             + ___specialchars_and_colour(s.substr(5, s.length-6))
+             + '</span>'
+             + ___specialchars_and_colour(s.substr(s.length-1));
+    return { target_hashes: target_hashes, html: html };
   } else if(s.substr(0,4) == "DIRC") {
     var html = 'DIRC'; // magic
     var i = 4;
@@ -292,7 +319,9 @@ function ___specialchars_and_colour_and_hex(s) {
       binary_span(32); // uid
       binary_span(32); // gid
       binary_span(32); // size
-      html += ___hex_hash(s.substr(i, 20)); // hash
+      var h = s.substr(i, 20);
+      target_hashes.push(___to_hex(h));
+      html += ___hex_hash(h); // hash
       i += 20;
       var length = s.substr(i, 2);
       length = length.charCodeAt(0) * 256 + length.charCodeAt(1);
@@ -315,12 +344,14 @@ function ___specialchars_and_colour_and_hex(s) {
       entry_start = i;
     }
 
-    html += ___hex_hash(s.substr(i, 20)); // hash
+    var h = s.substr(i, 20);
+    target_hashes.push(___to_hex(h));
+    html += ___hex_hash(h); // hash
     i += 20;
 
     html += ___specialchars_and_colour(s.substr(i)); // should be empty
 
-    return html;
+    return { target_hashes: target_hashes, html: html };
   } else if(s.substr(0,7) == "commit ") {
     var sz = s.split('\0');
     var sp = sz[1].split('\n');
@@ -330,7 +361,9 @@ function ___specialchars_and_colour_and_hex(s) {
       if (/(tree|parent) [0-9a-f]{40}/.test(sp[i])) {
         var prefix_len = sp[i].startsWith('tree ') ? 5 : 7;
         var id=___global_unique_id++;
-        var hash = "object-hash-"+sp[i].substr(prefix_len);
+        var h = sp[i].substr(prefix_len);
+        target_hashes.push(h);
+        var hash = "object-hash-"+h;
         sp[i] = ___specialchars_and_colour(sp[i].substr(0,prefix_len))
               + '<span id="'+id+'" class="plain-hash-or-ref" onmouseover="___hilite('+id+',\''+hash+'\')" onmouseout="___lolite('+id+',\''+hash+'\')">'
               + sp[i].substr(prefix_len)
@@ -343,9 +376,10 @@ function ___specialchars_and_colour_and_hex(s) {
       sp[i] = ___specialchars_and_colour(sp[i]);
     }
     var sp_joined = sp.join('<span class="specialchar newline">\\n</span>');
-    return [sz[0], sp_joined].join('<span class="specialchar newline">\\000</span>');
+    var html = [sz[0], sp_joined].join('<span class="specialchar newline">\\000</span>');
+    return { target_hashes: target_hashes, html: html };
   } else {
-    return ___specialchars_and_colour(s);
+    return { target_hashes: target_hashes, html: ___specialchars_and_colour(s) };
   }
 }
 function ___specialchars_and_colour_and_hex_and_zlib(s) {
@@ -360,15 +394,15 @@ function ___specialchars_and_colour_and_hex_and_zlib(s) {
       html:
         '<span id="deflated'+id+'-pretty">'
       + '<span class="deflated">deflated:</span>'
-      + ___specialchars_and_colour_and_hex(___uint8ArrayToString(inflated))
+      + ___specialchars_and_colour_and_hex(___uint8ArrayToString(inflated)).html
       + '</span>'
       + '<span id="deflated'+id+'-raw" style="display:none">'
-      + ___specialchars_and_colour_and_hex(s)
+      + ___specialchars_and_colour_and_hex(s).html
       + '</span>',
       td: function(td) { td.classList.add('deflate-toggle'); td.setAttribute('onclick', '___deflated_click('+id+')'); }
     };
   } else {
-    return { html: ___specialchars_and_colour_and_hex(s), td: function() {} };
+    return { html: ___specialchars_and_colour_and_hex(s).html, td: function() {} };
   }
 }
 function ___bytestring_to_printf(bs, trailing_x) {
@@ -399,22 +433,53 @@ function ___deflated_click(id) {
     document.getElementById('deflated'+id+'-raw').style.display = "none";
   }
 }
+
+function ___is_hashed_object_path(x) {
+  var sp = x.split('/');
+  return sp.length > 3 && sp[sp.length-3] == 'objects' && /^[0-9a-f]{2}$/.test(sp[sp.length-2]) && /^[0-9a-f]{38}$/.test(sp[sp.length-1]);
+}
+
+function ___get_hashed_object_path(x) {
+  var sp = x.split('/');
+  return sp.slice(sp.length-2).join('');
+}
+
+function ___is_ref_path(x) {
+  var sp = x.split('/');
+  return sp.length > 1 && sp.indexOf('refs') >= 0 && sp.length > sp.indexOf('refs') + 1;
+}
+
+function ___get_ref_path(x) {
+  var sp = x.split('/');
+  var refs_idx = sp.indexOf('refs');
+  return sp.slice(refs_idx).join('/');
+}
+
 function ___format_filepath(x) {
   var sp = x.split('/');
-  if (sp.length > 3 && sp[sp.length-3] == 'objects' && /^[0-9a-f]{2}$/.test(sp[sp.length-2]) && /^[0-9a-f]{38}$/.test(sp[sp.length-1])) {
+  if (___is_hashed_object_path(x)) {
     return sp.slice(0, sp.length-2).map(___specialchars_and_colour).join('/')+(sp.length > 2 ? '/' : '')
-         + '<span class="object-hash object-hash-'+sp.slice(sp.length-2).join('')+'">'
+         + '<span class="object-hash object-hash-'+___get_hashed_object_path(x)+'">'
          + sp.slice(sp.length-2).map(___specialchars_and_colour).join('/')
          + "</span>";
-  } else if (sp.length > 1 && sp.indexOf('refs') >= 0 && sp.length > sp.indexOf('refs') + 1) {
+  } else if (___is_ref_path(x)) {
     var refs_idx = sp.indexOf('refs');
     return sp.slice(0, refs_idx).map(___specialchars_and_colour).join('/')+'/'
-         + '<span class="object-hash object-hash-'+sp.slice(refs_idx).join('/')+'">'//TODO
+         + '<span class="object-hash object-hash-'+___get_ref_path(x)+'">'//TODO
          + sp.slice(refs_idx).map(___specialchars_and_colour).join('/')
          + "</span>";
   } else {
     return ___specialchars_and_colour(x);
   }
+}
+function ___format_contents(contents) {
+  if (contents === null) {
+    return { html: '<span class="directory">Directory</span>', td: function() {} };
+  } else {
+    var specials = ___specialchars_and_colour_and_hex_and_zlib(contents);
+    return { html: '<code>' + specials.html + '</code>', td: specials.td };
+  }
+
 }
 function ___format_entry(previous_filesystem, x) {
   var previous_filesystem = previous_filesystem || {};
@@ -434,13 +499,9 @@ function ___format_entry(previous_filesystem, x) {
   var td_contents = document.createElement('td');
   tr.appendChild(td_contents);
   td_contents.classList.add('cell-contents');
-  if (x[1] === null) {
-    td_contents.innerHTML = '<span class="directory">Directory</span>';
-  } else {
-    var specials = ___specialchars_and_colour_and_hex_and_zlib(x[1]);
-    td_contents.innerHTML = '<code>' + specials.html + '</code>';
-    specials.td(td_contents);
-  }
+  var html_and_function = ___format_contents(x[1]);
+  td_contents.innerHTML = html_and_function.html;
+  html_and_function.td(td_contents);
 
   return tr;
 }
@@ -487,7 +548,7 @@ function ___filesystem_to_table(fs, previous_filesystem) {
 function ___filesystem_to_string(fs, just_table, previous_filesystem) {
   var entries = ___sort_filesystem_entries(fs);
   var id = ___global_unique_id++;
-  var html = '<div class="hilite-wrapper">';
+  var html = '';
   if (! just_table) {
     html += 'Filesystem contents: ' + entries.length + " files and directories. "
       + '<a href="javascript: ___copyprintf_click(\'elem-'+id+'\');">'
@@ -498,8 +559,7 @@ function ___filesystem_to_string(fs, just_table, previous_filesystem) {
       + ___specialchars(___filesystem_to_printf(fs) || 'echo "Empty filesystem."')
       + '</textarea>';
   }
-  html += ___filesystem_to_table(fs, previous_filesystem).outerHTML // TODO: use DOM primitives instead.
-    + '</div>';
+  html += ___filesystem_to_table(fs, previous_filesystem).outerHTML; // TODO: use DOM primitives instead.
   return html;
 }
 function ___textarea_value(elem) {
@@ -537,41 +597,175 @@ var ___script_log_header = ''
   + '})(window.console);\n'
   + '\n';
 
-function ___file_contents_to_graphviz(s) {
+function ___file_contents_to_graphview(filesystem, path_of_this_file, s) {
+  var gv = '';
   try {
     var inflated = pako.inflate(___stringToUint8Array(s));
+    if (inflated) {
+      var s2 = ___uint8ArrayToString(inflated);
+    } else {
+      var s2 = s;
+    }
   } catch(e) {
-    var inflated = false;
+    var s2 = s;
   }
-  if (inflated) {
-    var id=___global_unique_id++;
-    return {
-      html:
-        '<span id="deflated'+id+'-pretty">'
-      + '<span class="deflated">deflated:</span>'
-      + ___specialchars_and_colour_and_hex(___uint8ArrayToString(inflated))
-      + '</span>'
-      + '<span id="deflated'+id+'-raw" style="display:none">'
-      + ___specialchars_and_colour_and_hex(s)
-      + '</span>',
-      td: function(td) { td.classList.add('deflate-toggle'); td.setAttribute('onclick', '___deflated_click('+id+')'); }
-    };
-  } else {
-    return { html: ___specialchars_and_colour_and_hex(s), td: function() {} };
+  var target_hashes = ___specialchars_and_colour_and_hex(s2).target_hashes;
+  var paths = Object.keys(filesystem);
+  for (var i = 0; i < paths.length; i++) {
+    if (___is_hashed_object_path(paths[i])) {
+      if (target_hashes.indexOf(___get_hashed_object_path(paths[i])) != -1) {
+        gv += ___quote_gv(path_of_this_file) + ' -> ' + ___quote_gv(paths[i]);
+      }
+    }
+    if (___is_ref_path(paths[i])) {
+      if (target_hashes.indexOf(___get_ref_path(paths[i])) != -1) {
+        gv += ___quote_gv(path_of_this_file) + ' -> ' + ___quote_gv(paths[i]);
+      }
+    }
   }
+  return gv;
 }  
 
-function ___filesystem_to_graphviz(filesystem, previous_filesystem) {
-  return "digraph graph_view {"
-  + 'a -> b'
-  + "}";
+function ___quote_gv(name) {
+  console.log('TODO: escape GV')
+  return '"' + name + '"';
 }
 
-function ___eval_result_to_string(filesystem, previous_filesystem, log) {
+function ___entry_to_graphview(previous_filesystem, filesystem, x) {
+  var gv = '';
+  gv += ___quote_gv(x[0]) + '\n';
+  
+  var components = x[0].split('/');
+
+  if (___is_hashed_object_path(x[0])) {
+    // var hash = components.slice(components.length-2).join('');
+    var shortname = components[components.length - 1].substr(0, 3) + '…';
+  } else {
+    var shortname = components[components.length - 1];
+  }
+
+  var parent = components.slice(0, components.length - 1).join('/');
+  if (parent != '') {
+    if (filesystem.hasOwnProperty(parent)) {
+      gv += ___quote_gv(parent) + ' -> ' + ___quote_gv(x[0]) + '[color="#c0c0ff"];\n';
+    } else {
+      shortname = parent + '/' + shortname;
+    }
+  }
+
+  // shortname as a label
+  gv += ___quote_gv(x[0]) + ' [ label = ' + ___quote_gv(shortname) + ' ]';
+
+  // Put a transparent background to make the nodes clickable.
+  gv += ___quote_gv(x[0]) + ' [ style="filled", fillcolor="transparent" ]';
+
+  // dim nodes that existed in the previous_filesystem
+  if (previous_filesystem.hasOwnProperty(x[0])) {
+    gv += ___quote_gv(x[0]) + ' [ color = gray, fontcolor = gray, class = dimmed_previous ]';
+  }
+
+  // contents of the file as a tooltip:
+  gv += ___quote_gv(x[0]) + ' [ tooltip = ' + '"CONTENTS x[1]"' + ' ]';
+
+  var id = ___global_unique_id++;
+  gv += ___quote_gv(x[0]) + ' [ id=' + id + ' ]';
+
+  if (x[1] === null) {
+    // This is a directory, nothing else to do.
+  } else {
+    gv += ___file_contents_to_graphview(filesystem, x[0], x[1]);
+  }
+  return { id:id, gv:gv };
+}
+
+var ___current_hover_graphview = null;
+var ___sticky_hover_graphview = false;
+function ___click_graphview_hover(id, default_id) {
+  if (___sticky_hover_graphview && ___current_hover_graphview === id) {
+    ___sticky_hover_graphview = false;
+    ___hide_graphview_hover(id, default_id);
+  } else {
+    ___sticky_hover_graphview = true;
+    ___show_graphview_hover(id, default_id);
+  }
+}
+
+function ___mouseout_graphview_hover(id, default_id) {
+  if (!___sticky_hover_graphview) {
+    ___hide_graphview_hover(id, default_id);
+  }
+}
+
+function ___mouseover_graphview_hover(id, default_id) {
+  if (!___sticky_hover_graphview) {
+    ___show_graphview_hover(id, default_id);
+  }
+}
+
+function ___show_graphview_hover(id, default_id) {
+  if (___current_hover_graphview !== null) {
+    ___hide_graphview_hover(___current_hover_graphview, default_id);
+  }
+  ___current_hover_graphview = id;
+  document.getElementById(default_id).style.visibility = 'hidden';
+  document.getElementById(id).style.visibility = 'visible';
+}
+
+function ___hide_graphview_hover(id, default_id) {
+  ___current_hover_graphview = default_id;
+  document.getElementById(default_id).style.visibility = 'visible';
+  document.getElementById(id).style.visibility = 'hidden';
+}
+
+function ___filesystem_to_graphview(filesystem, previous_filesystem) {
+  var html = '';
+  html += '<div class="graph-view-tooltips hilite-nodest">';
+  var entry_hover_default_id = ___global_unique_id++;
+  html += '<div class="graph-view-tooltips-default" id="'+entry_hover_default_id+'">Hover a node to view its contents, click or tap to pin it.</div>'
+  var gv = "digraph graph_view {";
+  var ids = [];
+  var entries = ___sort_filesystem_entries(filesystem);
+  for (var i = 0; i < entries.length; i++) {
+    var entry = ___entry_to_graphview(previous_filesystem, filesystem, entries[i]);
+    gv += entry.gv;
+    var entry_hover_id = ___global_unique_id++;
+    var entry_hover = '';
+    entry_hover += '<div id="' + entry_hover_id + '" style="visibility: hidden">';
+    //entry_hover += 'hover for ' + entries[i][0];
+    entry_hover += '<table><thead><tr><th class="cell-path">' + ___format_filepath(entries[i][0]) + '</th></tr></thead>';
+    // TODO: use the .td function here too.
+    entry_hover += '<tbody><tr><td>' + ___format_contents(entries[i][1]).html + '</td></tr></tbody></table>';
+    entry_hover += '</div>';
+    html += entry_hover;
+    ids.push({ id: entry.id, entry_hover_id: entry_hover_id });
+  }
+  gv += '}';
+  var js = function () {
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i].id);
+      el.setAttribute('onclick',         '___click_graphview_hover(' + ids[i].entry_hover_id + ', '+entry_hover_default_id+')');
+      el.setAttribute('onmouseover', '___mouseover_graphview_hover(' + ids[i].entry_hover_id + ', '+entry_hover_default_id+')');
+      el.setAttribute('onmouseout',   '___mouseout_graphview_hover(' + ids[i].entry_hover_id + ', '+entry_hover_default_id+')');
+    }
+  };
+  html += "</div>";
+  html += Viz(gv, "svg");
+  if (entries.length == 0) {
+    return { js: js, html: '<br/>' };
+  } else {
+    return { js: js, html: '<div class="graph-view">' + html + '</div>' };
+  }
+}
+
+function ___eval_result_to_html(id, filesystem, previous_filesystem, log, quiet) {
   var loghtml = '<pre class="log">' + log.map(function(l) { return l.map(function (x) { return x.toString(); }).join(', '); }).join('\n') + '</pre>'
-  return (log.length > 0 ? '<p>Console output:</p>' + loghtml : '')
-    + Viz(___filesystem_to_graphviz(filesystem, previous_filesystem), "svg")
-    + ___filesystem_to_string(filesystem, false, previous_filesystem);
+  var table = ___filesystem_to_string(filesystem, quiet, previous_filesystem);
+  var gv = ___filesystem_to_graphview(filesystem, previous_filesystem);
+  var html = (log.length > 0 ? '<p>Console output:</p>' + loghtml : '')
+    + gv.html
+    + table;
+  document.getElementById(id).innerHTML = '<div class="hilite-wrapper">' + html + '</div>';
+  gv.js();
 }
 function ___git_eval(current) {
   document.getElementById('hide-eval-' + current).style.display = '';
@@ -588,7 +782,7 @@ function ___git_eval(current) {
   + '"End of the script";\n'
   + '\n'
   + '\n'
-  + 'document.getElementById("out" + current).innerHTML = ___eval_result_to_string(filesystem, ___previous_filesystem, ___log);\n'
+  + '___eval_result_to_html("out" + current, filesystem, ___previous_filesystem, ___log, false);\n'
   + 'filesystem;\n';
   try {
     eval(script);
