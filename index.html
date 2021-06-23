@@ -140,9 +140,24 @@ function listdir(dirname) {
 </section>
 
 <section id="example-working-directory">
-<h1>Example working directory</h1>
+<h1>Example working tree</h1>
 <p>Our imaginary user will create a <code>proj</code> directory,
 and start filling in some files.</p>
+<div class="trivia">
+  <p trivia>
+    A <em>working tree</em> designates the directory (and the subdirectories and files within) in which
+    the user will normally view and edit the files. GIT has commands to save the state of the working tree
+    (git commit), in order to be able to go back in time later on, and view older versions of the files.
+    The command <code>git worktree</code> allows the user to create multiple working trees using the same
+    local repository. This effectively allows the user to easily have two or more versions of the project
+    side-by-side. GIT commands can be invoked in either copy. It is worth noting that the <code>.git/</code>
+    directory exists only in the original working tree; while it is safe to remove other worktrees (followed by
+    an invocation of <code>git worktree prune</code> from one of the remaining working tree to let GIT
+    detect the deletion), the removal of the original working tree will discard ths <code>.git/</code>
+    directory, and all versions of the project that have not been published elsewhere (usually via
+    <code>git push</code>) will be lost.
+  </p>
+</div>
 <textarea id="in3">
 mkdir('proj');
 cd('proj');
@@ -824,7 +839,7 @@ git checkout branch-of-feature-foobar
 
   <pre>
 HEAD = 0123456789abcdef0123456789abcdef01234567
-// overwrite the contents of the working directory with
+// overwrite the contents of the working tree with
 // the contents of commit 0123456789abcdef0123456789abcdef01234567
 checkout(0123456789abcdef0123456789abcdef01234567)
 
@@ -953,7 +968,7 @@ function advance_head_or_branch(new_commit_hash) {
   The official implementation of <code>git commit</code> makes use of <a href="#index">the index</a>.
   When a file is scheduled for the next commit using <code>git add path/to/file</code>, it is added to
   the index. The index is a representation of a collection of copies of files, which can efficiently be
-  compared to the working directory. It uses a different representation, but its role is very similar
+  compared to the working tree. It uses a different representation, but its role is very similar
   to that of a tree object along with the subtrees and blob objects of individual files. When
   <code>git commit</code> is called without specifying any files, it creates a commit containing the
   version of the files stored in the index.
@@ -1019,7 +1034,7 @@ git_tag('v1.0', second_commit);
 <section id="checkout-branch-vs-other">
 <p>
   The <code>git checkout commit-hash-or-reference</code> command modifies the HEAD to point to the given commit,
-  and modifies the working directory to match the contents of the tree object pointed to by that commit.
+  and modifies the working tree to match the contents of the tree object pointed to by that commit.
 </p>
 <textarea id="in18">
 function git_checkout(tag_or_branch_or_hash) {
@@ -1043,12 +1058,12 @@ function git_checkout(tag_or_branch_or_hash) {
 <section id="checkout-files">
 <h1>Checking out files</h1>
 <p>
-  In order to replace the contents of the working directory with those of the given commit, we
-  recursively compare the subtrees, deleting from the working directory the files or directories
+  In order to replace the contents of the working tree with those of the given commit, we
+  recursively compare the subtrees, deleting from the working tree the files or directories
   that are not present in the tree object, and overwriting the others.
 </p>
 <p>
-  The official implementation of GIT will record the diff between the current working directory
+  The official implementation of GIT will record the diff between the current working tree
   and the current commit, and will re-apply these changes on top of the freshly checked-out commit.
   The official <code>git checkout</code> command will print warnings and refuse to proceed when
   these changes cannot be re-applied without conflict, encouraging the user to create a commit
@@ -1071,7 +1086,7 @@ function checkout_tree(path_prefix, hash) {
   for (var i = 0; i < working_directory_contents.length; i++) {
     if (entries_names.indexOf(working_directory_contents[i]) == -1
         && working_directory_contents[i] != '.git') {
-      // The file or directory exists in the working directory, but
+      // The file or directory exists in the working tree, but
       // not in the commit that is being checked out, remove it recursively.
       remove(join_paths(path_prefix, working_directory_contents[i]), true);
     }
@@ -1341,10 +1356,10 @@ git_commit(['README', 'src/main.scm'], 'What an update!');
 
 git_checkout('main');
 
-// update the cache of the working directory. Without this,
+// update the cache of the working tree. Without this,
 // GIT finds an empty cache, and thinks all files are scheduled
 // for deletion, until "git add ." allows it to realize that
-// the working directory matches the contents of HEAD.
+// the working tree matches the contents of HEAD.
 store_index(['README', 'src/main.scm']);
 </textarea>
 
@@ -1362,17 +1377,36 @@ commands.</p>
   <ul>
     <li>
       Inspect an existing repository, starting with <code>cat .git/HEAD</code> and using <code>git cat-file -p some-hash</code>
-      to pretty-print an object given its hash.
+      to pretty-print an object given its hash. This will help sink in the points explained in this tutorial, and give a better
+      understanding of the internals of GIT. This knowledge is helpful for day-to-day tasks, as the GIT commands usually perform
+      simple changes to this internal representation. Understanding the representation better can demistify the semantics of
+      the daily GIT commands. Furthermore, equipped with a better understanding of GIT's implementation, the dreamy reader will
+      be tempted to compare this lack of intrinsic complexity with the apparent complexity, and be entitled to expect a better,
+      less arcane user interface for a tool with such a simple implementation.
     </li>
     <li>
-      Inspect an existing repository, starting with <code>cat .git/HEAD</code> and using the <code>zlib</code> decompression tool
-      from the <a href=#zlib-compression-note><code>zlib</code> compression</a> section.
+      Inspect a small existing repository, starting with <code>cat .git/HEAD</code> and using the <code>zlib</code> decompression
+      tool from the <a href=#zlib-compression-note><code>zlib</code> compression</a> section. Larger repositories will make use
+      of GIT packs, which are compressed archives containing a number of objects. GIT packs only matter as an optimization of the
+      disk space used by large repositories, but other tools would be necessary to inspect those. This should help understand
+      the internal representation of GIT commits and branches, and should help having a instinctive idea of how the data store is
+      modified by the various commands. This in turn could come in handy in case of apparent data loss (a lost stash or a checkout
+      leaving an unreferenced commit on a detached HEAD), as this would help understand the work done by the various
+      disaster-recovery one-liners that a quick panicked online search provides.
     </li>
     <li>
       Run <code>git init new-directory</code> in a terminal, and create an initial single-file commit from scratch, using only
-      <code>git hash-object</code>, <code>printf</code> and overwriting <code>.git/HEAD</code>. This will involve retracing the
-      steps in this tutorial to create a blob object for the file, a tree object to be the directory containing just that file,
-      and a commit object.
+      <code>git hash-object</code>, <code>printf</code> and overwriting <code>.git/HEAD</code> and/or
+      <code>.git/refs/heads/name-of-a-branch</code>. This will involve retracing the steps in this tutorial to create a blob
+      object for the file, a tree object to be the directory containing just that file, and a commit object. This exercise should
+      help sink in the feeling that the internal representation of GIT commits is not very complex, and that many commands with
+      convoluted options have very simple semantics. For example, <code>git reset --soft other-commit</code> is little more than
+      writing that other commit's hash in <code>.git/refs/heads/name-of-the-current-branch</code> or <code>.git/HEAD</code>.
+      Furthermore, equipped with an even better understanding of GIT's implementation, the dreamy reader will
+      be tempted to compare this lack of intrinsic complexity with the sheer complexity of the systems they are working with on
+      a day-to-day basis, and be entitled to expect better features in a versioning tool. After all, writing those
+      <span class="loc-count">few</span> lines of code to reimplement the core of a versioning tool shouldn't take more than a
+      couple of afternoons, surely our community can do better?
     </li>
     <li>
       For a couple of weeks, only use the GIT commands <code>commit</code>, <code>diff</code>, <code>checkout</code>,
@@ -1383,12 +1417,26 @@ commands.</p>
       explicitly give the name (origin) or URL of the remote, the hash of the commit to push, and the path that should be
       updated on the remote (<code>git push</code> while the <code>main</code> branch is checked out locally is equivalent
       to <code>git push origin HEAD:refs/heads/main</code>, where <code>HEAD</code> can be replaced by the actual hash of
-      the commit).
+      the commit). This should help sink in the feeling that the internals of GIT are very simple (most of these commands
+      are implemented in this tutorial, and the other ones are merely wrappers around enhanced versions of the *NIX commands
+      <code>diff</code>, <code>patch</code> and <code>scp</code>), and that the rest of the GIT toolkit consists mostly of
+      convenience wrappers to help seasoned users perform common tasks more efficiently.
     </li>
     <li>
       Try not even using <code>git cherry-pick</code> or <code>git diff</code> a few times, instead make two copies the git
       directoy, check out the two different commits in each copy, and use the traditional *NIX commands <code>diff</code> and
-      <code>patch</code>.
+      <code>patch</code>. This should help sink in the feeling that commits are not diffs, but are actual (deduplicated)
+      copies of the entire project directory. GIT commits are quite similar to the age-old manual versioning technique of
+      copying the entire directory under a new name at each version, except that the metadata keeps track of which version
+      was the previous one (or which versions were merged together to obtain the new one), and the deduplication avoids
+      excessive space usage, as would be the case with <code>cp --reflink</code> on a filesystem supporting Copy-On-Write (COW).
+    </li>
+    <li>
+      For a couple of weeks, don't use any local branch, and stay in detached HEAD state all the time. When checking out a
+      colleague's work, use <code>git fetch && git checkout origin/remote-branch</code>, and use the reflog and a text file
+      outside of the repository to keep track of the latest commit in a current "branch" instead of relying on GIT. This
+      should help sink in the feeling that branches are not containers in which commits pile up, but are merely pointers to
+      the latest commit that are automatically updated.
     </li>
   </ul> 
 </section>
