@@ -712,6 +712,7 @@ function ___show_graphview_hover(id, default_id) {
 }
 
 function ___hide_graphview_hover(id, default_id) {
+  ___hilite_off();
   ___current_hover_graphview = default_id;
   document.getElementById(default_id).style.visibility = 'visible';
   document.getElementById(id).style.visibility = 'hidden';
