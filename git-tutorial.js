@@ -936,12 +936,13 @@ function ___ancestor(elem, tag) {
 var ___global_editors = [];
 function ___functions_to_html(section) {
   var ul = document.createElement('ul');
-  var ta = section.getElementsByTagName('textarea');
+  var tas = section.getElementsByTagName('textarea');
+  var ta = [];
+  // Since CodeMirror replaces the textareas, the collection of HTML nodes
+  // is automatically updated in some browsers, and the indices become wrong
+  // after a replacement, so we copy the HTML element collection to a proper array.
+  for (var j = 0; j < ta.length; j++) { ta.push(tas[j]); }
   for (var j = 0; j < ta.length; j++) {
-    console.log(section.getAttribute('id'), ta[j].getAttribute('id'), ta.length, ___ancestor(ta[j], 'section').getAttribute('id'), ta[j], section);
-  }
-  for (var j = 0; j < ta.length; j++) {
-    console.log('k', section.getAttribute('id'), ta[j].getAttribute('id'), ___ancestor(ta[j], 'section').getAttribute('id'), ta[j], section);
     if (___ancestor(ta[j], 'section') == section) {
       var lines = ta[j].value.split('\n');
       var ret = ___toCodeMirror(ta[j]);
