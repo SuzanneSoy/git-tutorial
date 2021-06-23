@@ -738,29 +738,33 @@ function ___hide_graphview_hover(id, default_id) {
   document.getElementById(id).style.visibility = 'hidden';
 }
 
+var ___legend = ''
++ '<div class="legend">'
++ '<div class="legend-title">Legend:</div>'
++ Viz(
+  'digraph legend {\n' +
+  '  bgcolor=transparent;\n' +
+  '  ranksep=0;\n' +
+  '  "parent"   [label="parent directory",    style=filled, fillcolor=white, ' + ___directory_node_style + '];\n' +
+  '  "child"    [label="child",               style=filled, fillcolor=white];\n' +
+  '  "ref"      [label="reference to abcdef", style=filled, fillcolor=white];\n' +
+  '  "abcdef"   [label="…/.git/ab/cdef",      style=filled, fillcolor=white];\n' +
+  '  "existing" [label=<existing file<br/><font color="#80c5c5">existing dir</font>>,   style=filled, fillcolor=white, ' + ___previous_file_node_style + '];\n' +
+  '  "new"      [label=<new file<br/><font color="#008b8b">new dir</font>>,        style=filled, fillcolor=white];\n' +
+  '  "parent" -> "child" ['+___directory_edge_style+'];\n' +
+  '  "ref" -> "abcdef" ['+___ref_edge_style+'];\n' +
+  '  "existing" -> "new" [style=invis];\n' +
+  '}')
++ '</div>'
++ '</div>';
+
 function ___filesystem_to_graphview(filesystem, previous_filesystem) {
   var html = '';
   html += '<div class="graph-view-tooltips hilite-nodest">';
   var entry_hover_default_id = ___global_unique_id++;
   html += '<div class="graph-view-tooltips-default" id="'+entry_hover_default_id+'">';
   html += 'Hover a node to view its contents, click or tap to pin it.';
-  html += '<div class="legend">';
-  html += '<div class="legend-title">Legend:</div>';
-  html += Viz(
-    'digraph legend {\n' +
-    '  bgcolor=transparent;\n' +
-    '  "parent"   [label="parent directory",    style=filled, fillcolor=white, ' + ___directory_node_style + '];\n' +
-    '  "child"    [label="child",               style=filled, fillcolor=white];\n' +
-    '  "ref"      [label="reference to abcdef", style=filled, fillcolor=white];\n' +
-    '  "abcdef"   [label="…/.git/ab/cdef",      style=filled, fillcolor=white];\n' +
-    '  "existing" [label=<existing file/<font color="#80c5c5">dir</font>>,   style=filled, fillcolor=white, ' + ___previous_file_node_style + '];\n' +
-    '  "new"      [label="new file/dir",        style=filled, fillcolor=white];\n' +
-    '  "parent" -> "child" ['+___directory_edge_style+'];\n' +
-    '  "ref" -> "abcdef" ['+___ref_edge_style+'];\n' +
-    '  "existing" -> "new" [style=invis];\n' +
-    '}');
-  html += '</div>';
-  html += '</div>';
+  html += ___legend;
   var gv = "digraph graph_view {";
   var ids = [];
   var entries = ___sort_filesystem_entries(filesystem);
