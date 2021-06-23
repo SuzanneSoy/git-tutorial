@@ -17,7 +17,7 @@
 <script src="git-tutorial.js"></script>
 <script class="example">
 var examples=[];
-function ___h2f(hash) { return 'proj/.git/objects/'+hash.substr(0,2)+'/'+hash.substr(2); }
+function ___h2f(hash) { return 'proj/.git/objects/'+hash.substring(0,2)+'/'+hash.substring(2); }
 function ___example(id, f) {
   examples.push(function () {
     var result = f();
@@ -29,7 +29,7 @@ function ___example(id, f) {
     for (var i = 0; i < result.previous_names.length; i++) {
       previous_fs[result.previous_names[i]] = filesystem[result.previous_names[i]];
     }
-    ___eval_result_to_html(id, fs, previous_fs, [], true);
+    ___eval_result_to_html(id, fs, previous_fs, [], true, result.omit_graph);
   });
 }
 </script>
@@ -251,8 +251,8 @@ function hash_object(must_write, type, is_data, path_or_data) {
 
   if (must_write) {
     mkdir(join_paths(current_directory, '.git/objects'));
-    mkdir(join_paths(current_directory, '.git/objects/' + hash.substr(0,2)));
-    var object_path = join_paths(current_directory, '.git/objects/' + hash.substr(0,2) + '/' + hash.substr(2));
+    mkdir(join_paths(current_directory, '.git/objects/' + hash.substring(0,2)));
+    var object_path = join_paths(current_directory, '.git/objects/' + hash.substring(0,2) + '/' + hash.substring(2));
     // deflate() compresses using zlib
     write(object_path, deflate(object_contents));
   }
@@ -363,7 +363,7 @@ function hex_to_raw_bytes(hex) {
   var hex = String(hex);
   var str = ""
   for (var i = 0; i < hex.length; i+=2) {
-    str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+    str += String.fromCharCode(parseInt(hex.substring(i, i + 2), 16));
   }
   return str;
 }
@@ -571,7 +571,7 @@ any other non-branch reference.</p>
 <div id="example-reference"></div>
 <script class="example">
     ___example('example-reference', function() {
-    var h2f = function(hash) { return 'proj/.git/objects/'+hash.substr(0,2)+'/'+hash.substr(2); }
+    var h2f = function(hash) { return 'proj/.git/objects/'+hash.substring(0,2)+'/'+hash.substring(2); }
     var main = h2f(hash_object(true, 'blob', false, 'src/main.scm'));
     var readme = h2f(hash_object(true, 'blob', false, 'README'));
     var src = h2f(store_tree("src", ["main.scm"], []));
@@ -611,7 +611,7 @@ references, we need to get rid of the newline first.</p>
 <textarea>
 // Removes the newline at the end of a string, if present.
 function trim_newline(s) {
-  if (s.endsWith('\n')) { return s.substr(0, s.length-1); } else { return s; }
+  if (s.endsWith('\n')) { return s.substring(0, s.length-1); } else { return s; }
 }
 </textarea>
 
@@ -628,7 +628,7 @@ with <code>ref: </code>, the rest of the line will be returned.</p>
 function git_symbolic_ref(ref) {
   var ref_file = join_paths(current_directory, '.git/' + ref);
   if (exists(ref_file) && read(ref_file).startsWith('ref: ')) {
-    var result = trim_newline(read(ref_file)).substr('ref: '.length);
+    var result = trim_newline(read(ref_file)).substring('ref: '.length);
     var recursive = git_symbolic_ref(result);
     return recursive || result;
   } else {
@@ -650,7 +650,7 @@ function git_symbolic_ref(ref) {
 <div id="example-recursive-ref"></div>
 <script class="example">
   ___example('example-recursive-ref', function() {
-    var h2f = function(hash) { return 'proj/.git/objects/'+hash.substr(0,2)+'/'+hash.substr(2); }
+    var h2f = function(hash) { return 'proj/.git/objects/'+hash.substring(0,2)+'/'+hash.substring(2); }
     var main = h2f(hash_object(true, 'blob', false, 'src/main.scm'));
     var readme = h2f(hash_object(true, 'blob', false, 'README'));
     var src = h2f(store_tree("src", ["main.scm"], []));
@@ -750,7 +750,7 @@ to the branch, and this pointer can be read e.g. by <code>git rev-parse</code>.<
 <div id="example-git-branch"></div>
 <script class="example">
   ___example('example-git-branch', function() {
-    var h2f = function(hash) { return 'proj/.git/objects/'+hash.substr(0,2)+'/'+hash.substr(2); }
+    var h2f = function(hash) { return 'proj/.git/objects/'+hash.substring(0,2)+'/'+hash.substring(2); }
     var main = h2f(hash_object(true, 'blob', false, 'src/main.scm'));
     var readme = h2f(hash_object(true, 'blob', false, 'README'));
     var src = h2f(store_tree("src", ["main.scm"], []));
@@ -1113,16 +1113,24 @@ function checkout_tree(path_prefix, hash) {
   The parsers will check that their input looks reasonably well-formed, using <code>assert()</code>.</p>
 <textarea>
 function assert(boolean, text) {
-  if (! boolean) { alert("assertion failed: " + text); throw new Error(text); }
+  if (! boolean) { alert("GIT: assertion failed: " + text); throw new Error("GIT: assertion failed: " + text); }
 }
 </textarea>
 </section>
   
 <section id="parsed-compressed">
 <h1>Reading compressed objects</h1>
+<p>The GIT objects which are stored in <code>.git/objects</code> are compressed with <code>zlib</code>, and need to be
+uncompressed before they can be parsed. The actual implementation of GIT also stores some objects in <em>packs</em>. Packs
+contain a large number of objects, and used a form of delta compression, which effectively stores objects as the diff with
+another similar object, in order to optimize the disk space usage.</p>
+<p>Our simplified implementation only deals with zlib-compressed objects, and cannot read from pack files. The function below
+  extracts the type and length, which form the header present in all objects, and returns those along with the contents of the
+  object.
+</p>
 <textarea>
 function parse_object(hash) {
-  var compressed = read(join_paths(current_directory, '.git/objects/' + hash.substr(0,2) + '/' + hash.substr(2)));
+  var compressed = read(join_paths(current_directory, '.git/objects/' + hash.substring(0,2) + '/' + hash.substring(2)));
   var inflated = inflate(compressed);
   var split = inflated.match(/^([\s\S]*?) ([\s\S]*?)\0([\s\S]*)$/);
   
@@ -1139,31 +1147,54 @@ function parse_object(hash) {
 
 <section id="parse-tree">
 <h1>Parsing tree objects</h1>
+<p>We will start by parsing tree objects. As a reminder, a tree object has the following form:</p>
+<div id="example-tree-objects-parse"></div>
+<script class="example">
+  ___example('example-tree-objects-parse', function() {
+    var main   = ___h2f(hash_object(true, 'blob', false, 'src/main.scm'));
+    var readme = ___h2f(hash_object(true, 'blob', false, 'README'));
+    var src    = ___h2f(store_tree("src", ["main.scm"], []));
+    var proj   = ___h2f(paths_to_tree(["README", "src/main.scm"]));
+    var previous_names = [ ];
+    var names          = [ proj ];
+    return { filesystem: filesystem, names: names, previous_names: previous_names, omit_graph: true };
+  });
+</script>
+<p>
+  After the object header, we have a mode, a filename, a null byte and a hash consisting of 20 bytes.
+  The null byte cannot appear in the mode or filename, so we use this null + hash as a delimiter
+  (the non-greedy match ensures the null byte terminator will not match with a <code>00</code> byte in the hash)
+</p>
 <textarea>
 function parse_tree(hash) {
   var tree = parse_object(hash);
-  var split = tree.contents.split(/(?<=\0[\s\S]{20})/);
-  assert(split, 'invalid contents of tree object');
+  var i = 0;
   var entries = [];
-  for (var i = 0; i < split.length; i++) {
-    entries.push(parse_tree_entry(split[i]));
+  while (i < tree.contents.length) {
+    // skip to the null terminator
+    var space_offset = tree.contents.indexOf(' ', i);
+    var null_offset = tree.contents.indexOf('\0', i);
+    
+    // add 20 bytes for the hash that follows, and check the object isn't shorter than that
+    if (space_offset < null_offset && null_offset + 20 < tree.contents.length) {
+      var mode = tree.contents.substring(i, space_offset);
+      var name = tree.contents.substring(space_offset+1, null_offset);
+      var hash = to_hex(tree.contents.substring(null_offset + 1, null_offset + 1 + 20));  
+      entries.push({ mode: mode, name: name, hash: hash });
+    } else {
+      assert(false, 'invalid contents of tree object');
+    }
+
+    i = null_offset + 20 + 1;
   }
   return entries;
 }
 </textarea>
 
-<textarea>  
-function parse_tree_entry(entry) {
-  var split = entry.match(/^([0-9]+) ([\s\S]*)\0([\s\S]{20})$/);
-  assert(split, 'invalid entry in tree object');
-  var mode = split[1];
-  var name = split[2];
-  var hash = to_hex(split[3]);
-  return { mode: mode, name: name, hash: hash };
-}
-</textarea>
-
-<p>The <code>parse_tree</code> function above needs a small utility to convert hashes represented using raw bytes to a hexadecimal representation.</p>
+<p>
+  The <code>parse_tree</code> function above needs a small utility to convert hashes represented using
+  raw bytes to a hexadecimal representation.
+</p>
 <textarea id="in19">
 function to_hex(bin) {
   var bin = String(bin);

@@ -137,3 +137,4 @@ article#git-tutorial .onlytoc { display: none; }
 #git-tutorial .exercise-task { border: thin solid #80c5c5; background: #f1faff; padding: 1em }
 #git-tutorial .exercise-reason { border: thin solid #80c5c5; background: #f8fdff; padding: 1em }
 #git-tutorial .exercise-reason:before { content: "Rationale "; margin-bottom: 0.7em; font-weight: bold; display: block; }
+#git-tutorial .log-alert { color: red; font-weight: 500; }

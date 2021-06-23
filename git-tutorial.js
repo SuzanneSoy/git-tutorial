@@ -590,11 +590,17 @@ function ___copyprintf_click(id) {
 }
 var ___script_log_header = ''
   + 'var ___log = [];\n'
+  + 'var alert = (function (real_console, real_alert) {\n'
+  + '  return function(message) {\n'
+  + '    ___log[___log.length] = { alert: true, txt: message };\n'
+  + '    real_console.log("alert:", message);\n'
+  + '  };\n'
+  + '})(window.console, window.alert);\n'
   + 'var console = (function(real_console) {\n'
   + '  return {\n'
   + '    log: function() {\n'
-  + '      ___log[___log.length] = Array.from(arguments);\n'
-  + '      real_console.log.apply(console, arguments);\n'
+  + '      ___log[___log.length] = { alert: false, txt: Array.from(arguments).map(function (x) { return x.toString(); }).join(", ") };\n'
+  + '      real_console.log.apply(real_console, arguments);\n'
   + '    },\n'
   + '    assert: real_console.assert,\n'
   + '  };\n'
@@ -810,19 +816,30 @@ function ___filesystem_to_graphview(filesystem, previous_filesystem) {
   }
 }
 
-function ___eval_result_to_html(id, filesystem, previous_filesystem, log, quiet) {
-  var loghtml = '<pre class="log">' + log.map(function(l) { return l.map(function (x) { return x.toString(); }).join(', '); }).join('\n') + '</pre>'
+function ___log_to_html(log) {
+  return '<pre class="log">'
+    + log.map(function(l) {
+        return '<div class="' + (l.alert ? 'log-alert' : 'log-log') + '">'
+          + ___specialchars(l.txt)
+          + '</div>';
+      }).join('\n')
+    + '</pre>'
+}
+
+function ___eval_result_to_html(id, filesystem, previous_filesystem, log, quiet, omit_graph) {
+  var loghtml = ___log_to_html(log);
   var table = ___filesystem_to_string(filesystem, quiet, previous_filesystem);
   var gv = ___filesystem_to_graphview(filesystem, previous_filesystem);
   var html = (log.length > 0 ? '<p>Console output:</p>' + loghtml : '')
-    + gv.html
+    + (omit_graph ? '' : gv.html)
     + table;
   document.getElementById(id).innerHTML = '<div class="hilite-wrapper">' + html + '</div>';
-  gv.js();
+  if (!omit_graph) { gv.js(); }
 }
 function ___git_eval(current) {
   document.getElementById('hide-eval-' + current).style.display = '';
   var script = ___script_log_header;
+  script += 'try {';
   for (i = 0; i <= current - 1; i++) {
     script += ___textarea_value(___global_editors[i]);
   }
@@ -832,6 +849,13 @@ function ___git_eval(current) {
   + '___log = [];\n';
   script += ___textarea_value(___global_editors[current]);
   script += '\n'
+  + '} catch (e) {'
+  + '  if (("" + e.message).indexOf("GIT: assertion failed: ") != 0) {'
+  + '    throw e;'
+  + '  } else {'
+  + '    ___log.push({ alert: true, txt: "command failed" });'
+  + '  }'
+  + '}'
   + '"End of the script";\n'
   + '\n'
   + '\n'
