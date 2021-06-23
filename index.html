@@ -1209,6 +1209,8 @@ function to_hex(bin) {
 
 <section id="parse-commit">
 <h1>Parsing commit objects</h1>
+<p>The following function is fairly long, but only parses lines of the form <code>header-name header-value</code>
+  (with some restrictions depending on the header), followed by a blenk line, and a free-form description.</p>
 <textarea>
 function parse_commit(hash) {
   var commit = parse_object(hash);
@@ -1265,6 +1267,8 @@ function parse_commit(hash) {
 
 <section id="parse-author-committer">
 <h1>Parsing author and committer metadata</h1>
+<p>The author and committer metadata has the form <code>Name &lt;email@domain.tld&gt; timestamp +timezone</code>,
+for example <code>Ada Lovelace &lt;ada@analyti.cal&gt; 1617120803 +0100</code></p>
 <textarea>
 function parse_author(value, field) {
   var split = value.match(/^(.*?) <(.*?)> ([0-9]+) ([+-])([0-9][0-9])([0-9][0-9])$/);
@@ -1283,7 +1287,10 @@ function parse_author(value, field) {
 
 <section id="checkout-example">
 <h1>Example checkout</h1>
-<p></p>
+<p>
+  Now that we can parse blobs objects, trees, and commits, it is now possible to checkout a given commit.
+  The following operation will revert the working tree to the state that was copied in the initial commit.
+</p>
 <textarea id="in20">
 git_checkout(initial_commit);
 </textarea>
@@ -1306,7 +1313,7 @@ function git_init() {
 <h1>The index</h1>
 <p>When adding files with <code>git add</code>, GIT does not immediately create a commit object.
   Instead, it adds the files to the index, which uses a binary format with lots of metadata.
-  The mock filesystem used here lacks most of these pieces of information, so thr value <code>0</code>
+  The mock filesystem used here lacks most of these pieces of information, so the value <code>0</code>
   will be used for most fields. See <a href="https://mincong.io/2018/04/28/git-index/">this blog post</a>
   for a more in-depth study of the index.</p>
 <textarea id="index-raw-bytes-utils">
