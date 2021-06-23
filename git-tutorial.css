@@ -144,4 +144,4 @@ article#git-tutorial .onlytoc { display: none; }
 #git-tutorial .exercise-reason { border: thin solid #80c5c5; background: #f8fdff; padding: 1em }
 #git-tutorial .exercise-reason:before { content: "Rationale "; margin-bottom: 0.7em; font-weight: bold; display: block; }
 #git-tutorial .log-alert { color: red; font-weight: 500; }
-#git-tutorial button { margin-top: 0.3em; }
+#git-tutorial input[type='button'] { display: inline-block; margin-top: 0.2em; }

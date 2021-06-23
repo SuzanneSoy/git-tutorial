@@ -126,11 +126,13 @@ function listdir(dirname) {
   var paths = Object.keys(filesystem);
   // Filter to keep only the paths starting with the given dirname
   var prefix = dirname + '/';
-  var descendents = paths
-      .filter(function (filename) { return filename.startsWith(prefix) && (filename.length > prefix.length); });
+  var descendents = paths.filter(function (filename) {
+    return filename.startsWith(prefix) && (filename.length > prefix.length);
+  });
   // Keep only the next path component
-  var children = descendents
-      .map(function (filename) { return filename.split('/')[depth]; });
+  var children = descendents.map(function (filename) {
+    return filename.split('/')[depth];
+  });
   // remove duplicates, listdir('a') with paths a/b/c and a/b/d and a/x
   // should only return ['b', 'x'], not 'b', 'b', x.
   return Array.from(new Set(children));
@@ -243,7 +245,11 @@ the <code>git hash-object</code> command which can be called on a real git comma
 <textarea id="in5">
 // git hash-object [-w] -t <type> [--stdin] [path]
 function hash_object(must_write, type, is_data, path_or_data) {
-  var data = is_data ? path_or_data : read(join_paths(current_directory, path_or_data));
+  if (is_data) {
+    var data = path_or_data;
+  } else {
+    var data = read(join_paths(current_directory, path_or_data));
+  }
 
   object_contents = type + ' ' + data.length + '\0' + data;
 
@@ -252,9 +258,10 @@ function hash_object(must_write, type, is_data, path_or_data) {
   if (must_write) {
     mkdir(join_paths(current_directory, '.git/objects'));
     mkdir(join_paths(current_directory, '.git/objects/' + hash.substring(0,2)));
-    var object_path = join_paths(current_directory, '.git/objects/' + hash.substring(0,2) + '/' + hash.substring(2));
+    var path = '.git/objects/' + hash.substring(0,2) + '/' + hash.substring(2);
+    var object_full_path = join_paths(current_directory, path);
     // deflate() compresses using zlib
-    write(object_path, deflate(object_contents));
+    write(object_full_path, deflate(object_contents));
   }
 
   return hash;
@@ -376,7 +383,7 @@ function hex_to_raw_bytes(hex) {
 and for the root directory of the GIT project.</p>
 <textarea id="in10">
 //hash_src_tree  = store_tree("src", ["main.scm"], []);
-//hash_root_tree = store_tree("",    ["README"],   [{name:"src", hash:hash_src_tree}]);
+//hash_root_tree = store_tree("", ["README"], [{name:"src", hash:hash_src_tree}]);
 </textarea>
 <p>The <code>store_tree()</code> function needs to be called for the contents of subdirectories
 first, and that result can be used to store the trees of upper directories. In the next section,
@@ -503,7 +510,8 @@ function store_commit(tree, parents, author, committer, message) {
                   + format_date(committer.date) + ' '
                   + format_timezone(committer.timezoneMinutes) + '\n';
   commit_contents += '\n';
-  commit_contents += '' + message + (message[message.length-1] == '\n' ? '' : '\n');
+  commit_contents += '' + message;
+  if (message[message.length-1] != '\n') { commit_contents += '\n'; }
   // cat commit_contents | git hash-object -w -t commit --stdin
   return hash_object(true, 'commit', true, commit_contents);
 }
@@ -529,11 +537,18 @@ function format_timezone(tm) {
   The first commit has no parent, which is represented by passing
   the empty list.</p>
 <textarea id="in13">
-initial_commit = store_commit(
+var author = {
+  name: 'Ada Lovelace',
+  email: 'ada@analyti.cal',
+  date: new Date(1617120803000),
+  timezoneMinutes: +60
+}
+var committer = author; // in this case, Ada commits her own changes.
+var initial_commit = store_commit(
   paths_to_tree(["README", "src/main.scm"]),
   [],
-  {name:'Ada Lovelace', email:'ada@analyti.cal', date:new Date(1617120803000), timezoneMinutes: +60},
-  {name:'Ada Lovelace', email:'ada@analyti.cal', date:new Date(1617120803000), timezoneMinutes: +60},
+  author,
+  committer,
   'Initial commit');
 </textarea>
 </section>
@@ -691,6 +706,9 @@ and returns the hash. The difference with <code>git symbolic-ref</code> is that 
 to other references, and returns the last named reference in the chain of indirections, whereas <code>rev-parse</code>
 goes one step further and returns the hash pointed to by the last named reference.</p>
 <textarea>
+function follow_ref(path) {
+  return git_rev_parse(trim_newline(read(join_paths(current_directory, path))));
+}
 function git_rev_parse(ref) {
   var symbolic_ref_target = git_symbolic_ref(ref);
   if (symbolic_ref_target) {
@@ -701,16 +719,17 @@ function git_rev_parse(ref) {
     return ref;
   } else if (ref == 'HEAD') {
     // user-friendly reference like "HEAD"
-    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/' + ref))));
-  } else if (ref.startsWith('refs/') && exists(join_paths(current_directory, '.git/' + ref))) {
+    return follow_ref('.git/' + ref);
+  } else if (ref.startsWith('refs/')
+             && exists(join_paths(current_directory, '.git/' + ref))) {
     // user-friendly reference like "refs/heads/main"
-    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/' + ref))));
+    return follow_ref('.git/' + ref);
   } else if (exists(join_paths(current_directory, '.git/refs/heads/' + ref))) {
     // user-friendly reference like "main" (a branch)
-    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/refs/heads/' + ref))));
+    return follow_ref('.git/refs/heads/' + ref);
   } else if (exists(join_paths(current_directory, '.git/refs/tags/' + ref))) {
     // user-friendly reference like "v1.0" (a branch)
-    return git_rev_parse(trim_newline(read(join_paths(current_directory, '.git/refs/tags/' + ref))));
+    return follow_ref('.git/refs/tags/' + ref);
   } else {
     // unknown ref
     return false;
@@ -732,11 +751,13 @@ function git_branch(branch_name, commit_ref, force) {
   var commit_hash = git_rev_parse(commit_ref);
   mkdir(join_paths(current_directory, '.git/refs'));
   mkdir(join_paths(current_directory, '.git/refs/heads'));
-  if (!force && exists(join_paths(current_directory, '.git/refs/heads/' + branch_name))) {
+  var branch_path = '.git/refs/heads/' + branch_name;
+  var full_branch_path = join_paths(current_directory, branch_path);
+  if (!force && exists(full_branch_path)) {
     alert("branch already exists");
     return false;
   } else {
-    write(join_paths(current_directory, '.git/refs/heads/' + branch_name), commit_hash + '\n');
+    write(full_branch_path, commit_hash + '\n');
     return true;
   }
 }
@@ -1113,7 +1134,8 @@ function checkout_tree(path_prefix, hash) {
   The parsers will check that their input looks reasonably well-formed, using <code>assert()</code>.</p>
 <textarea>
 function assert(boolean, text) {
-  if (! boolean) { alert("GIT: assertion failed: " + text); throw new Error("GIT: assertion failed: " + text); }
+  if (! boolean) { alert("GIT: assertion failed: " + text);
+  throw new Error("GIT: assertion failed: " + text); }
 }
 </textarea>
 </section>
