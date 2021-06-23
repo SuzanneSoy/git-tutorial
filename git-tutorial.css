@@ -59,7 +59,16 @@ article#git-tutorial table, #git-tutorial pre.log, #git-tutorial .graph-view { w
 #git-tutorial .hex { color: brown; }
 #git-tutorial .hex-hash { display: block; width: max-content; }
 #git-tutorial .hex-hash, #git-tutorial .plain-hash-or-ref { border: thin solid brown; }
-#git-tutorial .plain-hash-or-ref { display: inline-block; margin: 0.5px 0; }
+#git-tutorial .plain-hash-or-ref { display: inline-block; margin: 0.5px 0; padding-top: 0.5em; padding-bottom: 0.5em; }
+/* On mobile devices (and devices with a coarse pointing device like a wiimote), the single-line hashes are too small to be clicked.
+   The default of 0.5em should help with that, but if we can detect a coarse device or lack of hover capability, we increase
+   the padding. */
+@media (pointer:coarse) {
+    #git-tutorial .plain-hash-or-ref { padding-top: 1em; padding-bottom: 1em; }
+}
+@media (hover:none) {
+    #git-tutorial .plain-hash-or-ref { padding-top: 1em; padding-bottom: 1em; }
+}
 #git-tutorial .hex-hash.hilite-src, #git-tutorial .plain-hash-or-ref.hilite-src { background: lightyellow; border-color: red; }
 #git-tutorial .object-hash.hilite-dest { background: lightyellow; border-color: red; }
 #git-tutorial .object-hash { border: thin solid transparent; }
