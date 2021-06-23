@@ -938,7 +938,10 @@ function ___functions_to_html(section) {
   var ul = document.createElement('ul');
   var ta = section.getElementsByTagName('textarea');
   for (var j = 0; j < ta.length; j++) {
-    console.log('toCodeMirror:', ta[j], ta[j].getAttribute('id'), section, ___ancestor(ta[j], 'section'));
+    console.log(section.getAttribute('id'), ta[j].getAttribute('id'), ta.length, ___ancestor(ta[j], 'section').getAttribute('id'), ta[j], section);
+  }
+  for (var j = 0; j < ta.length; j++) {
+    console.log('k', section.getAttribute('id'), ta[j].getAttribute('id'), ___ancestor(ta[j], 'section').getAttribute('id'), ta[j], section);
     if (___ancestor(ta[j], 'section') == section) {
       var lines = ta[j].value.split('\n');
       var ret = ___toCodeMirror(ta[j]);
