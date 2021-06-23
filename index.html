@@ -167,7 +167,7 @@ write('proj/src/main.scm', '(map (lambda (x) (+ x 1)) (list 1 2 3))\n');
 </textarea>
 </section>
 
-<section id="git-init">
+<section id="git-init-dot-git">
 <h1><code>git init</code> (creating <code>.git</code>)</h1>
 <p>The first thing to do is to initialize the GIT directory.
 For now, only the <code>.git</code> folder is needed, The rest
@@ -1031,7 +1031,6 @@ git_tag('v1.0', second_commit);
 
 <section id="git-checkout">
 <h1><code>git checkout</code></h1>
-<section id="checkout-branch-vs-other">
 <p>
   The <code>git checkout commit-hash-or-reference</code> command modifies the HEAD to point to the given commit,
   and modifies the working tree to match the contents of the tree object pointed to by that commit.
@@ -1048,6 +1047,7 @@ function git_checkout(tag_or_branch_or_hash) {
   checkout_files(git_rev_parse('HEAD'));
 }
 </textarea>
+<section id="checkout-branch-vs-other">
 <h1>Checkout, branches and other references</h1>
 <p>The HEAD does not normally point to a tag. Although nothing actually
   prevents writing <code>ref: refs/tags/v1.0</code> into <code>.git/HEAD</code>, the GIT
@@ -1374,31 +1374,48 @@ commands.</p>
     The reader willing to improve their grasp of GIT's mental model, and reduce their reliance on a few learned recipies, might
     be interested in the following warm-up exercises:
   </p>
-  <ul>
-    <li>
+
+  <section class="exercise" id="exercise-cat-file">
+    <h1>Inspection using <code>git cat-file</code></h1>
+    <p class="exercise-task">
       Inspect an existing repository, starting with <code>cat .git/HEAD</code> and using <code>git cat-file -p some-hash</code>
-      to pretty-print an object given its hash. This will help sink in the points explained in this tutorial, and give a better
+      to pretty-print an object given its hash.
+    </p>
+    <p class="exercise-reason">
+      This will help sink in the points explained in this tutorial, and give a better
       understanding of the internals of GIT. This knowledge is helpful for day-to-day tasks, as the GIT commands usually perform
       simple changes to this internal representation. Understanding the representation better can demistify the semantics of
       the daily GIT commands. Furthermore, equipped with a better understanding of GIT's implementation, the dreamy reader will
       be tempted to compare this lack of intrinsic complexity with the apparent complexity, and be entitled to expect a better,
       less arcane user interface for a tool with such a simple implementation.
-    </li>
-    <li>
+    </p>
+  </section>
+  <section class="exercise" id="exercise-files-in-dot-git">
+    <h1>Inspection of the files in <code>.git/</code></h1>
+    <p class="exercise-task">
       Inspect a small existing repository, starting with <code>cat .git/HEAD</code> and using the <code>zlib</code> decompression
       tool from the <a href=#zlib-compression-note><code>zlib</code> compression</a> section. Larger repositories will make use
       of GIT packs, which are compressed archives containing a number of objects. GIT packs only matter as an optimization of the
-      disk space used by large repositories, but other tools would be necessary to inspect those. This should help understand
+      disk space used by large repositories, but other tools would be necessary to inspect those.
+    </p>
+    <p class="exercise-reason">
+      This should help understand
       the internal representation of GIT commits and branches, and should help having a instinctive idea of how the data store is
       modified by the various commands. This in turn could come in handy in case of apparent data loss (a lost stash or a checkout
       leaving an unreferenced commit on a detached HEAD), as this would help understand the work done by the various
       disaster-recovery one-liners that a quick panicked online search provides.
-    </li>
-    <li>
+    </p>
+  </section>
+  <section class="exercise" id="exercise-repo-from-statch">
+    <h1>Creating a repository from scratch</h1>
+    <p class="exercise-task">
       Run <code>git init new-directory</code> in a terminal, and create an initial single-file commit from scratch, using only
       <code>git hash-object</code>, <code>printf</code> and overwriting <code>.git/HEAD</code> and/or
       <code>.git/refs/heads/name-of-a-branch</code>. This will involve retracing the steps in this tutorial to create a blob
-      object for the file, a tree object to be the directory containing just that file, and a commit object. This exercise should
+      object for the file, a tree object to be the directory containing just that file, and a commit object.
+    </p>
+    <p class="exercise-reason">
+      This exercise should
       help sink in the feeling that the internal representation of GIT commits is not very complex, and that many commands with
       convoluted options have very simple semantics. For example, <code>git reset --soft other-commit</code> is little more than
       writing that other commit's hash in <code>.git/refs/heads/name-of-the-current-branch</code> or <code>.git/HEAD</code>.
@@ -1407,8 +1424,11 @@ commands.</p>
       a day-to-day basis, and be entitled to expect better features in a versioning tool. After all, writing those
       <span class="loc-count">few</span> lines of code to reimplement the core of a versioning tool shouldn't take more than a
       couple of afternoons, surely our community can do better?
-    </li>
-    <li>
+    </p>
+  </section>
+  <section class="exercise" id="exercise-only-basic-commands">
+    <h1>Using only basic GIT commands</h1>
+    <p class="exercise-task">
       For a couple of weeks, only use the GIT commands <code>commit</code>, <code>diff</code>, <code>checkout</code>,
       <code>merge</code>, <code>cherry-pick</code>, <code>log</code>, <code>clone</code>, <code>fetch</code> and
       <code>push remote hash-of-commit:refs/heads/name-of-the-branch</code>. In particular, don't use <code>rebase</code>
@@ -1417,28 +1437,42 @@ commands.</p>
       explicitly give the name (origin) or URL of the remote, the hash of the commit to push, and the path that should be
       updated on the remote (<code>git push</code> while the <code>main</code> branch is checked out locally is equivalent
       to <code>git push origin HEAD:refs/heads/main</code>, where <code>HEAD</code> can be replaced by the actual hash of
-      the commit). This should help sink in the feeling that the internals of GIT are very simple (most of these commands
+      the commit).
+    </p>
+    <p class="exercise-reason">
+      This should help sink in the feeling that the internals of GIT are very simple (most of these commands
       are implemented in this tutorial, and the other ones are merely wrappers around enhanced versions of the *NIX commands
       <code>diff</code>, <code>patch</code> and <code>scp</code>), and that the rest of the GIT toolkit consists mostly of
       convenience wrappers to help seasoned users perform common tasks more efficiently.
-    </li>
-    <li>
+    </p>
+  </section>
+  <section class="exercise" id="exercise-commits-are-copies">
+    <h1>Understanding commits as copies of the root directory</h1>
+    <p class="exercise-task">
       Try not even using <code>git cherry-pick</code> or <code>git diff</code> a few times, instead make two copies the git
       directoy, check out the two different commits in each copy, and use the traditional *NIX commands <code>diff</code> and
-      <code>patch</code>. This should help sink in the feeling that commits are not diffs, but are actual (deduplicated)
+      <code>patch</code>.
+    </p>
+    <p class="exercise-reason">
+      This should help sink in the feeling that commits are not diffs, but are actual (deduplicated)
       copies of the entire project directory. GIT commits are quite similar to the age-old manual versioning technique of
       copying the entire directory under a new name at each version, except that the metadata keeps track of which version
       was the previous one (or which versions were merged together to obtain the new one), and the deduplication avoids
       excessive space usage, as would be the case with <code>cp --reflink</code> on a filesystem supporting Copy-On-Write (COW).
-    </li>
-    <li>
+    </p>
+  </section>
+  <section class="exercise" id="exercise-branches-as-pointers">
+    <h1>Branches as pointers: living without branches</h1>
+    <p class="exercise-task">
       For a couple of weeks, don't use any local branch, and stay in detached HEAD state all the time. When checking out a
       colleague's work, use <code>git fetch && git checkout origin/remote-branch</code>, and use the reflog and a text file
-      outside of the repository to keep track of the latest commit in a current "branch" instead of relying on GIT. This
-      should help sink in the feeling that branches are not containers in which commits pile up, but are merely pointers to
-      the latest commit that are automatically updated.
-    </li>
-  </ul> 
+      outside of the repository to keep track of the latest commit in a current "branch" instead of relying on GIT.
+    </p>
+    <p class="exercise-reason">
+      This should help sink in the feeling that branches are not containers in which commits pile up, but are merely pointers
+      to the latest commit that are automatically updated.
+    </p>
+  </section>
 </section>
 
 <section id="conclusion">

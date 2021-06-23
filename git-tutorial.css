@@ -123,3 +123,17 @@ article#git-tutorial .onlytoc { display: none; }
 #git-tutorial .graph-view-tooltips tr td { opacity: 1; border: none; border-top:thin solid: #444; }
 #git-tutorial .graph-view-tooltips > .graph-view-tooltips-default { color: #444; text-align: center; }
 #git-tutorial .graph-view .legend { padding: 0.8em 0.3em 0.3em; }
+
+/* Section counters */
+#git-tutorial { counter-reset: h1counter h2counter h3counter; }
+#git-tutorial > section { counter-reset: h2counter h3counter;}
+#git-tutorial > section > h1 { counter-increment: h1counter; }
+#git-tutorial > section > h1::before { content: counter(h1counter) ". " }
+#git-tutorial > section > section { counter-reset: h3counter; }
+#git-tutorial > section > section > h1 { counter-increment: h2counter; }
+#git-tutorial > section > section > h1::before { content: counter(h1counter) "." counter(h2counter) ". " }
+#git-tutorial > section > section.exercise > h1::before { content: "Exercise " counter(h1counter) "." counter(h2counter) ". " }
+
+#git-tutorial .exercise-task { border: thin solid #80c5c5; background: #f1faff; padding: 1em }
+#git-tutorial .exercise-reason { border: thin solid #80c5c5; background: #f8fdff; padding: 1em }
+#git-tutorial .exercise-reason:before { content: "Rationale "; margin-bottom: 0.7em; font-weight: bold; display: block; }
