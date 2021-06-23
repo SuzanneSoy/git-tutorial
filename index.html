@@ -611,7 +611,7 @@ references, we need to get rid of the newline first.</p>
 <textarea>
 // Removes the newline at the end of a string, if present.
 function trim_newline(s) {
-  if (s.endsWith('\n')) { return s.substring(0, s.length-1); } else { return s; }
+  if (s[s.length-1] == '\n') { return s.substring(0, s.length-1); } else { return s; }
 }
 </textarea>
 

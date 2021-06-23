@@ -38,7 +38,7 @@ article#git-tutorial table, #git-tutorial pre.log, #git-tutorial .graph-view { w
 
 @media (max-width: 63em) {
     #git-tutorial td, #git-tutorial th { padding-left: 0; padding-right: 0; }
-    #git-tutorial td.cell-contents, #git-tutorial th.cell-contents { width: 30em; }
+    #git-tutorial td.cell-contents, #git-tutorial th.cell-contents { width: 30.6em; }
     article#git-tutorial { left:0.5em; right:6em; max-width: 63rem; }
     article#git-tutorial table, #git-tutorial pre.log, #git-tutorial .graph-view { width: 100%; margin-left: auto; }
     #git-tutorial #toc { right: -12em; }
@@ -58,7 +58,7 @@ article#git-tutorial table, #git-tutorial pre.log, #git-tutorial .graph-view { w
 #git-tutorial .hex-prefix { color: lightgrey; }
 #git-tutorial .hex { color: brown; }
 #git-tutorial .hex-hash { display: block; width: max-content; }
-#git-tutorial .hex-hash, #git-tutorial .plain-hash-or-ref { border: thin solid brown; }
+#git-tutorial .hex-hash, #git-tutorial .plain-hash-or-ref { border: thin solid brown; padding-left: 0.3em; padding-right: 0.3em; }
 #git-tutorial .plain-hash-or-ref { display: inline-block; margin: 0.5px 0; padding-top: 0.5em; padding-bottom: 0.5em; }
 /* On mobile devices (and devices with a coarse pointing device like a wiimote), the single-line hashes are too small to be clicked.
    The default of 0.5em should help with that, but if we can detect a coarse device or lack of hover capability, we increase
