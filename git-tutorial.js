@@ -286,7 +286,7 @@ function ___specialchars_and_colour_and_hex(s) {
              + s.substr(0,40)
              + '</span>'
              + ___specialchars_and_colour(s.substr(40));
-    return { type: 'hash', type: '', target_hashes: target_hashes, html: html };
+    return { type: 'hash', target_hashes: target_hashes, html: html };
   } else if (/^ref: refs\/[^\n]*\n$/.test(s)) {
     var id = ___global_unique_id++;
     var h = s.substr(5, s.length-6)
