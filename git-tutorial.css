@@ -96,6 +96,7 @@ article#git-tutorial .onlytoc { display: none; }
 #git-tutorial .trivia { opacity: 80%; border: thin solid slategrey; margin: 1em; padding: 0.3em; }
 #git-tutorial .trivia:before { content: "Trivia"; border-bottom: thin solid slategrey; display: block; text-align: center; }
 #git-tutorial .trivia table { min-width: 90%; max-width: 90%; width: 90%; margin-left: auto; margin-right: auto; }
+#git-tutorial .trivia .graph-view { min-width: 90%; max-width: 90%; width: 90%; margin-left: auto; margin-right: auto; }
 /*#git-tutorial .trivia table td.cell-contents, #git-tutorial .trivia table th.cell-contents { width: 30%; }*/
 
 /* Graph view */
