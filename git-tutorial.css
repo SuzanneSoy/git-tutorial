@@ -112,6 +112,7 @@ article#git-tutorial .onlytoc { display: none; }
 
 #git-tutorial .dimmed_previous:hover [stroke] { stroke: black; }
 #git-tutorial .dimmed_previous:hover [fill="#808080"] { fill: black; }
+#git-tutorial .legend .dimmed_previous:hover [fill="#80c5c5"] { fill: darkcyan; }
 #git-tutorial .dimmed_previous_directory [stroke] { stroke: darkcyan; }
 #git-tutorial .dimmed_previous_directory:hover [fill="#80c5c5"] { fill: darkcyan; }
 #git-tutorial .graph-view { text-align: center; }
