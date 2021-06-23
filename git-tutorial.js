@@ -276,7 +276,7 @@ function ___specialchars_and_colour_and_hex(s) {
             + ___specialchars_and_colour(sp[i].substr(20));
     }
     var html = sp.join('<span class="specialchar newline">\\000</span>');
-    return { target_hashes: target_hashes, html: html };
+    return { type: 'tree', target_hashes: target_hashes, html: html };
   } else if (/^[0-9a-f]{40}\n$/.test(s)) {
     var id = ___global_unique_id++;
     var h = s.substr(0,40);
@@ -286,7 +286,7 @@ function ___specialchars_and_colour_and_hex(s) {
              + s.substr(0,40)
              + '</span>'
              + ___specialchars_and_colour(s.substr(40));
-    return { target_hashes: target_hashes, html: html };
+    return { type: 'hash', type: '', target_hashes: target_hashes, html: html };
   } else if (/^ref: refs\/[^\n]*\n$/.test(s)) {
     var id = ___global_unique_id++;
     var h = s.substr(5, s.length-6)
@@ -297,7 +297,7 @@ function ___specialchars_and_colour_and_hex(s) {
              + ___specialchars_and_colour(s.substr(5, s.length-6))
              + '</span>'
              + ___specialchars_and_colour(s.substr(s.length-1));
-    return { target_hashes: target_hashes, html: html };
+    return { type: 'symbolic ref', target_hashes: target_hashes, html: html };
   } else if(s.substr(0,4) == "DIRC") {
     var html = 'DIRC'; // magic
     var i = 4;
@@ -351,7 +351,7 @@ function ___specialchars_and_colour_and_hex(s) {
 
     html += ___specialchars_and_colour(s.substr(i)); // should be empty
 
-    return { target_hashes: target_hashes, html: html };
+    return { type: 'index / staging', target_hashes: target_hashes, html: html };
   } else if(s.substr(0,7) == "commit ") {
     var sz = s.split('\0');
     var sp = sz[1].split('\n');
@@ -377,9 +377,11 @@ function ___specialchars_and_colour_and_hex(s) {
     }
     var sp_joined = sp.join('<span class="specialchar newline">\\n</span>');
     var html = [sz[0], sp_joined].join('<span class="specialchar newline">\\000</span>');
-    return { target_hashes: target_hashes, html: html };
+    return { type: 'commit', target_hashes: target_hashes, html: html };
+  } else if (s.substr(0, 5) == "blob ") {
+    return { type: 'blob', target_hashes: target_hashes, html: ___specialchars_and_colour(s) };
   } else {
-    return { target_hashes: target_hashes, html: ___specialchars_and_colour(s) };
+    return { type: 'regular file', target_hashes: target_hashes, html: ___specialchars_and_colour(s) };
   }
 }
 function ___specialchars_and_colour_and_hex_and_zlib(s) {
@@ -609,7 +611,9 @@ function ___file_contents_to_graphview(filesystem, path_of_this_file, s) {
   } catch(e) {
     var s2 = s;
   }
-  var target_hashes = ___specialchars_and_colour_and_hex(s2).target_hashes;
+  var special = ___specialchars_and_colour_and_hex(s2)
+  var target_hashes = special.target_hashes;
+  var type = special.type;
   var paths = Object.keys(filesystem);
   for (var i = 0; i < paths.length; i++) {
     if (___is_hashed_object_path(paths[i])) {
@@ -623,12 +627,12 @@ function ___file_contents_to_graphview(filesystem, path_of_this_file, s) {
       }
     }
   }
-  return gv;
+  return { gv:gv, type: type };
 }  
 
 function ___quote_gv(name) {
   console.log('TODO: escape GV')
-  return '"' + name + '"';
+  return '"' + name.replace('\n', '\\n') + '"';
 }
 
 function ___entry_to_graphview(previous_filesystem, filesystem, x) {
@@ -653,9 +657,6 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
     }
   }
 
-  // shortname as a label
-  gv += ___quote_gv(x[0]) + ' [ label = ' + ___quote_gv(shortname) + ' ]';
-
   // Put a transparent background to make the nodes clickable.
   gv += ___quote_gv(x[0]) + ' [ style="filled", fillcolor="transparent" ]';
 
@@ -671,10 +672,17 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
   gv += ___quote_gv(x[0]) + ' [ id=' + id + ' ]';
 
   if (x[1] === null) {
+    shortname = shortname + '\ndirectory';
     // This is a directory, nothing else to do.
   } else {
-    gv += ___file_contents_to_graphview(filesystem, x[0], x[1]);
+    var contents = ___file_contents_to_graphview(filesystem, x[0], x[1]);
+    shortname = shortname + '\n(' + contents.type + ')';
+    gv += contents.gv;
   }
+
+  // shortname as a label
+  gv += ___quote_gv(x[0]) + ' [ label = ' + ___quote_gv(shortname) + ' ]';
+
   return { id:id, gv:gv };
 }
 
