@@ -941,7 +941,7 @@ function ___functions_to_html(section) {
   // Since CodeMirror replaces the textareas, the collection of HTML nodes
   // is automatically updated in some browsers, and the indices become wrong
   // after a replacement, so we copy the HTML element collection to a proper array.
-  for (var j = 0; j < ta.length; j++) { ta.push(tas[j]); }
+  for (var j = 0; j < tas.length; j++) { ta.push(tas[j]); }
   for (var j = 0; j < ta.length; j++) {
     if (___ancestor(ta[j], 'section') == section) {
       var lines = ta[j].value.split('\n');
