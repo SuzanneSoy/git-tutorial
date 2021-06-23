@@ -956,11 +956,21 @@ function git_commit(file_paths, message) {
   var parent = git_rev_parse('HEAD');
   var parents = parent ? [parent] : []
 
+  var author = {
+    name: gitconfig.user.name,
+    email: gitconfig.user.email,
+    date: now,
+    timezoneMinutes:timezoneMinutes
+  };
+  // the date would be different from the author's e.g. for a git commit --amend,
+  // and the name and e-mail would be different e.g. for a git rebase
+  var committer = author;
+
   var new_commit_hash = store_commit(
     paths_to_tree(file_paths),
     parents,
-    {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
-    {name:gitconfig.user.name, email:gitconfig.user.email, date:now, timezoneMinutes:timezoneMinutes },
+    author,
+    committer,
     message || $EDITOR());
 
   advance_head_or_branch(new_commit_hash);
@@ -977,11 +987,12 @@ function advance_head_or_branch(new_commit_hash) {
   var referenced_branch = git_symbolic_ref('HEAD');
   if (referenced_branch) {
     // Update the target of the ref:
-    write(join_paths(current_directory, '.git/' + referenced_branch), new_commit_hash + '\n');
+    var path = join_paths(current_directory, '.git/' + referenced_branch)
   } else {
     // Detached HEAD, update .git/HEAD directly.
-    write(join_paths(current_directory, '.git/HEAD'), new_commit_hash + '\n');
+    var path = join_paths(current_directory, '.git/HEAD');
   }
+  write(path, new_commit_hash + '\n');
 }
 </textarea>
 
@@ -1019,11 +1030,12 @@ var second_commit = git_commit(['README', 'src/main.scm'], 'Some updates');
 function git_tag(tag_name, commit_hash, force) {
   mkdir(join_paths(current_directory, '.git/refs'));
   mkdir(join_paths(current_directory, '.git/refs/tags'));
-  if (!force && exists(join_paths(current_directory, '.git/refs/tags/' + tag_name))) {
+  var tag_path = join_paths(current_directory, '.git/refs/tags/' + tag_name);
+  if (!force && exists(tag_path)) {
     alert("tag already exists");
     return false;
   } else {
-    write(join_paths(current_directory, '.git/refs/tags/' + tag_name), commit_hash + '\n');
+    write(tag_path, commit_hash + '\n');
     return true;
   }
 }
@@ -1058,12 +1070,14 @@ git_tag('v1.0', second_commit);
 </p>
 <textarea id="in18">
 function git_checkout(tag_or_branch_or_hash) {
-  if (exists(join_paths(current_directory, '.git/refs/heads/' + tag_or_branch_or_hash))) {
+  var ref_path = 'refs/heads/' + tag_or_branch_or_hash;
+  var head_path = join_paths(current_directory, '.git/HEAD');
+  if (exists(join_paths(current_directory, '.git/' + ref_path))) {
     // Normal (attached) HEAD, points to 'ref: refs/heads/the_branch_name'
-    write(join_paths(current_directory, '.git/HEAD'), 'ref: refs/heads/' + tag_or_branch_or_hash + '\n');
+    write(head_path, 'ref: ' + ref_path + '\n');
   } else {
     // Detached HEAD, points directly to commit hash
-    write(join_paths(current_directory, '.git/HEAD'), git_rev_parse(tag_or_branch_or_hash) + '\n');
+    write(head_path, git_rev_parse(tag_or_branch_or_hash) + '\n');
   }
   checkout_files(git_rev_parse('HEAD'));
 }
@@ -1152,7 +1166,9 @@ another similar object, in order to optimize the disk space usage.</p>
 </p>
 <textarea>
 function parse_object(hash) {
-  var compressed = read(join_paths(current_directory, '.git/objects/' + hash.substring(0,2) + '/' + hash.substring(2)));
+  var path = '.git/objects/' + hash.substring(0,2) + '/' + hash.substring(2);
+  var object_full_path = join_paths(current_directory, path);
+  var compressed = read(object_full_path);
   var inflated = inflate(compressed);
   var split = inflated.match(/^([\s\S]*?) ([\s\S]*?)\0([\s\S]*)$/);
   
@@ -1189,19 +1205,20 @@ function parse_object(hash) {
 </p>
 <textarea>
 function parse_tree(hash) {
-  var tree = parse_object(hash);
+  var tree = parse_object(hash).contents;
   var i = 0;
   var entries = [];
-  while (i < tree.contents.length) {
+  while (i < tree.length) {
     // skip to the null terminator
-    var space_offset = tree.contents.indexOf(' ', i);
-    var null_offset = tree.contents.indexOf('\0', i);
+    var space_offset = tree.indexOf(' ', i);
+    var null_offset = tree.indexOf('\0', i);
     
-    // add 20 bytes for the hash that follows, and check the object isn't shorter than that
-    if (space_offset < null_offset && null_offset + 20 < tree.contents.length) {
-      var mode = tree.contents.substring(i, space_offset);
-      var name = tree.contents.substring(space_offset+1, null_offset);
-      var hash = to_hex(tree.contents.substring(null_offset + 1, null_offset + 1 + 20));  
+    // add 20 bytes for the hash that follows,
+    // and check the object isn't shorter than that
+    if (space_offset < null_offset && null_offset + 20 < tree.length) {
+      var mode = tree.substring(i, space_offset);
+      var name = tree.substring(space_offset+1, null_offset);
+      var hash = to_hex(tree.substring(null_offset + 1, null_offset + 1 + 20));  
       entries.push({ mode: mode, name: name, hash: hash });
     } else {
       assert(false, 'invalid contents of tree object');
@@ -1293,7 +1310,8 @@ function parse_commit(hash) {
 for example <code>Ada Lovelace &lt;ada@analyti.cal&gt; 1617120803 +0100</code></p>
 <textarea>
 function parse_author(value, field) {
-  var split = value.match(/^(.*?) <(.*?)> ([0-9]+) ([+-])([0-9][0-9])([0-9][0-9])$/);
+  var pattern = /^(.*?) <(.*?)> ([0-9]+) ([+-])([0-9][0-9])([0-9][0-9])$/;
+  var split = value.match(pattern);
   assert(split, 'ill-formed ' + field)
   var name             = split[1];
   var email            = split[2];
@@ -1411,7 +1429,8 @@ git_commit(['README', 'src/main.scm'], 'A well-understood initial commit.');
 git_branch('dev', 'HEAD');
 git_checkout('dev');
 
-write('proj/src/main.scm', "(define filesystem '())\n(define current_directory \"\")\n");
+write('proj/src/main.scm',
+      "(define filesystem '())\n(define current_directory \"\")\n");
 git_commit(['README', 'src/main.scm'], 'What an update!');
 
 git_checkout('main');
