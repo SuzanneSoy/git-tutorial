@@ -940,6 +940,7 @@ function ___functions_to_html(section) {
   for (var j = 0; j < ta.length; j++) {
     if (___ancestor(ta[j], 'section') == section) {
       var lines = ta[j].value.split('\n');
+      console.log('toCodeMirror:', ta[j]);
       var ret = ___toCodeMirror(ta[j]);
       var editor = ret.editor;
       var editor_id = ret.editor_id;
