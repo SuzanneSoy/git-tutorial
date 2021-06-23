@@ -111,16 +111,16 @@ article#git-tutorial .onlytoc { display: none; }
 /* Graph view */
 
 #git-tutorial .dimmed_previous:hover [stroke] { stroke: black; }
-#git-tutorial .dimmed_previous:hover [fill=#808080] { fill: black; }
+#git-tutorial .dimmed_previous:hover [fill="#808080"] { fill: black; }
 #git-tutorial .dimmed_previous_directory [stroke] { stroke: darkcyan; }
-#git-tutorial .dimmed_previous_directory:hover [fill=#80c5c5] { fill: darkcyan; }
+#git-tutorial .dimmed_previous_directory:hover [fill="#80c5c5"] { fill: darkcyan; }
 #git-tutorial .graph-view { text-align: center; }
 #git-tutorial .graph-view-tooltips { white-space: nowrap; margin: 1em 0.3em; background: #f8f8f8; border: thin solid #444; text-align: left; }
 #git-tutorial .graph-view-tooltips > * { display: inline-block; white-space: normal; width: 100%; margin-right: -100%; vertical-align: middle; }
 #git-tutorial .graph-view-tooltips table { margin-left: auto; width: 100%; border: none }
 #git-tutorial .graph-view-tooltips tr { border: none; }
 #git-tutorial .graph-view-tooltips tr th { opacity: 1; border: none; border-bottom:thin solid #444; text-align: left; }
-#git-tutorial .graph-view-tooltips tr td { opacity: 1; border: none; border-top:thin solid: #444; }
+#git-tutorial .graph-view-tooltips tr td { opacity: 1; border: none; border-top: thin solid #444; }
 #git-tutorial .graph-view-tooltips > .graph-view-tooltips-default { color: #444; text-align: center; }
 #git-tutorial .graph-view .legend { padding: 0.8em 0.3em 0.3em; }
 
