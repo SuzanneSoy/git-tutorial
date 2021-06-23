@@ -4,6 +4,7 @@ article#git-tutorial { position: absolute; top:0; left:0.5em; transition: right,
                      background: white; border-left: 1px solid gray; transition: border-width 0.2s, right 0.2s; z-index: 1000; }
 #git-tutorial #toc:hover { right: 0; transition: border-width 0.4s, right 0.4s; z-index: 3000; }
 #git-tutorial .lines { position: absolute; z-index: 2000; }
+#git-tutorial .trivia { z-index: 1900; }
 #git-tutorial textarea, #git-tutorial .CodeMirror { width: 100%; font-size: 1.2rem; border: thin solid black; }
 #git-tutorial table { table-layout: fixed; width: 100%; font-size: 100%; font-family: monospace; min-width: 41em; }
 #git-tutorial pre.log { border: thin solid gray; padding: 0.3em; font-size: 100%; font-family: monospace; box-sizing: border-box; }
@@ -102,10 +103,14 @@ article#git-tutorial .onlytoc { display: none; }
 /* Highlight elements when a click on e.g. a hash scrolls to the destination */
 #git-tutorial .scroll-destination-hilite, #git-tutorial .scroll-destination-hilite td { transition: background 0.5s linear 0.5s, opacity 0.4s linear 0.5s; background: #ffd3d3 !important; opacity: 1 !important; }
 #git-tutorial .scroll-destination-lolite, #git-tutorial .scroll-destination-lolite td { transition: background linear 0.5s, opacity linear 0.5s; }
-#git-tutorial .trivia { opacity: 80%; border: thin solid slategrey; margin: 1em; padding: 0.3em; }
+#git-tutorial .trivia { border: thin solid slategrey; margin: 1em; padding: 0.3em; }
 #git-tutorial .trivia:before { content: "Trivia"; border-bottom: thin solid slategrey; display: block; text-align: center; }
-#git-tutorial .trivia table { min-width: 90%; max-width: 90%; width: 90%; margin-left: auto; margin-right: auto; }
-#git-tutorial .trivia .graph-view { min-width: 90%; max-width: 90%; width: 90%; margin-left: auto; margin-right: auto; }
+#git-tutorial .trivia table, #git-tutorial .trivia .graph-view { min-width: 90%; max-width: 90%; width: 90%; margin-left: auto; margin-right: auto; }
+#git-tutorial .trivia td.cell-contents, #git-tutorial .trivia th.cell-contents { width: 26.6em; }
+
+@media (max-width: 72em) {
+    #git-tutorial .trivia table, #git-tutorial .trivia .graph-view { min-width: 100%; max-width: 100%; width: 100%; }
+}
 /*#git-tutorial .trivia table td.cell-contents, #git-tutorial .trivia table th.cell-contents { width: 30%; }*/
 
 /* Graph view */
@@ -139,3 +144,4 @@ article#git-tutorial .onlytoc { display: none; }
 #git-tutorial .exercise-reason { border: thin solid #80c5c5; background: #f8fdff; padding: 1em }
 #git-tutorial .exercise-reason:before { content: "Rationale "; margin-bottom: 0.7em; font-weight: bold; display: block; }
 #git-tutorial .log-alert { color: red; font-weight: 500; }
+#git-tutorial button { margin-top: 0.3em; }
