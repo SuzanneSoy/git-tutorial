@@ -938,9 +938,9 @@ function ___functions_to_html(section) {
   var ul = document.createElement('ul');
   var ta = section.getElementsByTagName('textarea');
   for (var j = 0; j < ta.length; j++) {
+    console.log('toCodeMirror:', ta[j], ta[j].getAttribute('id'), section);
     if (___ancestor(ta[j], 'section') == section) {
       var lines = ta[j].value.split('\n');
-      console.log('toCodeMirror:', ta[j]);
       var ret = ___toCodeMirror(ta[j]);
       var editor = ret.editor;
       var editor_id = ret.editor_id;
