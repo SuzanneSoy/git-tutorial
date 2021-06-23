@@ -211,7 +211,7 @@ copy will be stored in <code>.git/objects/0a/1bd…</code></p>
 <script class="example">
   ___example('example-blob-object-template', function() {
     var object_contents = 'type length\000Contents of path_or_data';
-    var hash = sha1(object_contents);
+    var hash = sha1_from_bytes_returns_hex(object_contents);
     var path = ___h2f(hash);
     write(path, deflate(object_contents));
     return { filesystem: filesystem, names: [path], previous_names: [] };
@@ -247,7 +247,7 @@ function hash_object(must_write, type, is_data, path_or_data) {
 
   object_contents = type + ' ' + data.length + '\0' + data;
 
-  var hash = sha1(object_contents);
+  var hash = sha1_from_bytes_returns_hex(object_contents);
 
   if (must_write) {
     mkdir(join_paths(current_directory, '.git/objects'));
@@ -312,7 +312,7 @@ files, but it would be nice to also store the filenames.
 This is done by creating a <em>tree</em> object</p>
 
 <p>A tree object can contain files (by associating the blob's hash to its name), or directories (by associating the hash of other subtrees to their name).
-  The mode (<code>100644</code> for the file and <code>40000</code> for the folder) incidates the permissions, and is given in octal using <a href="https://unix.stackexchange.com/a/145118/19059">the values used by *nix</a></p>
+  The mode (<code>100644</code> for the file and <code>40000</code> for the folder) indicates the permissions, and is given in octal using <a href="https://unix.stackexchange.com/a/145118/19059">the values used by *nix</a></p>
 
 <div id="example-tree-objects"></div>
 <script class="example">
@@ -1322,7 +1322,7 @@ function store_index(paths) {
     index += entry;
   }
 
-  index += hex_to_raw_bytes(sha1(index));
+  index += hex_to_raw_bytes(sha1_from_bytes_returns_hex(index));
 
   write(join_paths(current_directory, '.git/index'), index)
 }

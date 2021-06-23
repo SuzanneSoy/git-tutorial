@@ -33,7 +33,7 @@ function ___hex_to_bin(hex) {
 }
 
 // These three functions are accessible in the user scripts.
-sha1 = function(s) { return Sha1.hash(___to_hex(s), { msgFormat: 'hex-bytes', outFormat: 'hex' }); };
+sha1_from_bytes_returns_hex = function(s) { return Sha1.hash(___to_hex(s), { msgFormat: 'hex-bytes', outFormat: 'hex' }); };
 deflate = function(s) { return ___uint8ArrayToString(pako.deflate(___stringToUint8Array(s))); }
 inflate = function(s) { return ___uint8ArrayToString(pako.inflate(___stringToUint8Array(s))); }
 
@@ -380,6 +380,8 @@ function ___specialchars_and_colour_and_hex(s) {
     return { type: 'commit', target_hashes: target_hashes, html: html };
   } else if (s.substr(0, 5) == "blob ") {
     return { type: 'blob', target_hashes: target_hashes, html: ___specialchars_and_colour(s) };
+  } else if (s.substr(0, 11) == "type length") {
+    return { type: 'example object', target_hashes: target_hashes, html: ___specialchars_and_colour(s) };
   } else {
     return { type: 'regular file', target_hashes: target_hashes, html: ___specialchars_and_colour(s) };
   }
@@ -618,17 +620,23 @@ function ___file_contents_to_graphview(filesystem, path_of_this_file, s) {
   for (var i = 0; i < paths.length; i++) {
     if (___is_hashed_object_path(paths[i])) {
       if (target_hashes.indexOf(___get_hashed_object_path(paths[i])) != -1) {
-        gv += ___quote_gv(path_of_this_file) + ' -> ' + ___quote_gv(paths[i]);
+        gv += ___quote_gv(path_of_this_file) + ' -> ' + ___quote_gv(paths[i]) + ' ['+___ref_edge_style+']';
       }
     }
     if (___is_ref_path(paths[i])) {
       if (target_hashes.indexOf(___get_ref_path(paths[i])) != -1) {
-        gv += ___quote_gv(path_of_this_file) + ' -> ' + ___quote_gv(paths[i]);
+        gv += ___quote_gv(path_of_this_file) + ' -> ' + ___quote_gv(paths[i]) + ' ['+___ref_edge_style+']';
       }
     }
   }
   return { gv:gv, type: type };
-}  
+}
+
+var ___directory_edge_style = 'color="#c0c0ff", style=dashed';
+var ___ref_edge_style = 'color="red", penwidth=2';
+var ___previous_file_node_style = 'color = "#808080", fontcolor = "#808080", class = dimmed_previous';
+var ___previous_directory_node_style = 'color = "#80c5c5", fontcolor = "#80c5c5", class = dimmed_previous_directory';
+var ___directory_node_style = 'color = "#008b8b", fontcolor = "#008b8b"'; // darkcyan = #008b8b
 
 function ___quote_gv(name) {
   console.log('TODO: escape GV')
@@ -651,7 +659,7 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
   var parent = components.slice(0, components.length - 1).join('/');
   if (parent != '') {
     if (filesystem.hasOwnProperty(parent)) {
-      gv += ___quote_gv(parent) + ' -> ' + ___quote_gv(x[0]) + '[color="#c0c0ff"];\n';
+      gv += ___quote_gv(parent) + ' -> ' + ___quote_gv(x[0]) + ' ['+___directory_edge_style+'];\n';
     } else {
       shortname = parent + '/' + shortname;
     }
@@ -660,24 +668,28 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
   // Put a transparent background to make the nodes clickable.
   gv += ___quote_gv(x[0]) + ' [ style="filled", fillcolor="transparent" ]';
 
-  // dim nodes that existed in the previous_filesystem
-  if (previous_filesystem.hasOwnProperty(x[0])) {
-    gv += ___quote_gv(x[0]) + ' [ color = gray, fontcolor = gray, class = dimmed_previous ]';
-  }
-
   // contents of the file as a tooltip:
-  gv += ___quote_gv(x[0]) + ' [ tooltip = ' + '"CONTENTS x[1]"' + ' ]';
+  gv += ___quote_gv(x[0]) + ' [ tooltip = ' + ___quote_gv(x[0]) + ' ]';
 
   var id = ___global_unique_id++;
   gv += ___quote_gv(x[0]) + ' [ id=' + id + ' ]';
 
   if (x[1] === null) {
     shortname = shortname + '\ndirectory';
-    // This is a directory, nothing else to do.
+    if (previous_filesystem.hasOwnProperty(x[0])) {
+      // dim nodes that existed in the previous_filesystem
+      gv += ___quote_gv(x[0]) + ' [' + ___previous_directory_node_style + ']';
+    } else {
+      gv += ___quote_gv(x[0]) + ' [ ' + ___directory_node_style + ' ]';
+    }
   } else {
     var contents = ___file_contents_to_graphview(filesystem, x[0], x[1]);
     shortname = shortname + '\n(' + contents.type + ')';
     gv += contents.gv;
+    if (previous_filesystem.hasOwnProperty(x[0])) {
+      // dim nodes that existed in the previous_filesystem
+      gv += ___quote_gv(x[0]) + ' [' + ___previous_file_node_style + ']';
+    }
   }
 
   // shortname as a label
@@ -730,7 +742,25 @@ function ___filesystem_to_graphview(filesystem, previous_filesystem) {
   var html = '';
   html += '<div class="graph-view-tooltips hilite-nodest">';
   var entry_hover_default_id = ___global_unique_id++;
-  html += '<div class="graph-view-tooltips-default" id="'+entry_hover_default_id+'">Hover a node to view its contents, click or tap to pin it.</div>'
+  html += '<div class="graph-view-tooltips-default" id="'+entry_hover_default_id+'">';
+  html += 'Hover a node to view its contents, click or tap to pin it.';
+  html += '<div class="legend">';
+  html += '<div class="legend-title">Legend:</div>';
+  html += Viz(
+    'digraph legend {\n' +
+    '  bgcolor=transparent;\n' +
+    '  "parent"   [label="parent directory",    style=filled, fillcolor=white, ' + ___directory_node_style + '];\n' +
+    '  "child"    [label="child",               style=filled, fillcolor=white];\n' +
+    '  "ref"      [label="reference to abcdef", style=filled, fillcolor=white];\n' +
+    '  "abcdef"   [label="…/.git/ab/cdef",      style=filled, fillcolor=white];\n' +
+    '  "existing" [label=<existing file/<font color="#80c5c5">dir</font>>,   style=filled, fillcolor=white, ' + ___previous_file_node_style + '];\n' +
+    '  "new"      [label="new file/dir",        style=filled, fillcolor=white];\n' +
+    '  "parent" -> "child" ['+___directory_edge_style+'];\n' +
+    '  "ref" -> "abcdef" ['+___ref_edge_style+'];\n' +
+    '  "existing" -> "new" [style=invis];\n' +
+    '}');
+  html += '</div>';
+  html += '</div>';
   var gv = "digraph graph_view {";
   var ids = [];
   var entries = ___sort_filesystem_entries(filesystem);
