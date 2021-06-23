@@ -727,15 +727,20 @@ function ___show_graphview_hover(id, default_id) {
     ___hide_graphview_hover(___current_hover_graphview, default_id);
   }
   ___current_hover_graphview = id;
+  // There's a bug on chrome mobile which still shows the border despite the hidden visibility, hoping opacity = 0 will fix this.
   document.getElementById(default_id).style.visibility = 'hidden';
+  document.getElementById(default_id).style.opacity = '0';
   document.getElementById(id).style.visibility = 'visible';
+  document.getElementById(id).style.opacity = '1';
 }
 
 function ___hide_graphview_hover(id, default_id) {
   ___hilite_off();
   ___current_hover_graphview = default_id;
   document.getElementById(default_id).style.visibility = 'visible';
+  document.getElementById(default_id).style.opacity = '1';
   document.getElementById(id).style.visibility = 'hidden';
+  document.getElementById(id).style.opacity = '0';
 }
 
 var ___legend = ''
@@ -773,7 +778,7 @@ function ___filesystem_to_graphview(filesystem, previous_filesystem) {
     gv += entry.gv;
     var entry_hover_id = ___global_unique_id++;
     var entry_hover = '';
-    entry_hover += '<div id="' + entry_hover_id + '" style="visibility: hidden">';
+    entry_hover += '<div id="' + entry_hover_id + '" style="visibility: hidden; opacity: 0;">';
     //entry_hover += 'hover for ' + entries[i][0];
     entry_hover += '<table><thead><tr><th class="cell-path">' + ___format_filepath(entries[i][0]) + '</th></tr></thead>';
     // TODO: use the .td function here too.
