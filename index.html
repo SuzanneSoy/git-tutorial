@@ -10,6 +10,9 @@
 <script src="sha1.js"></script>
 <script src="pako.min.js"></script>
 <script src="viz.js"></script>
+<script src="FileSaver.js"></script>
+<script src="Blob.js"></script>
+<script src="jszip.min.js"></script>
 <link rel="stylesheet" href="codemirror-5.60.0/lib/codemirror.css">
 
 <!-- Implementation of the tutorial's helper tools (code editor, graph view, table of contents, table output and arrows): -->
@@ -47,6 +50,10 @@ function ___example(id, f) {
   <li><a href="https://www.movable-type.co.uk/scripts/sha1.html">sha1.js</a>, released under the MIT license,</li>
   <li><a href="https://github.com/nodeca/pako">pako 2.0.3</a>, released under the MIT and Zlib licenses, see the project page for details,</li>
   <li><a href="https://github.com/mdaines/viz.js">Viz.js</a> (<a href="https://github.com/mdaines/viz.js/releases/tag/v1.8.2">v1.8.2</a> which has a synchronous API), released under the MIT license.</li>
+  <li><a href="https://github.com/eligrey/FileSaver.js">FileSaver.js</a>, released under the MIT license</li>
+  <li><a href="https://github.com/eligrey/Blob.js">Blob.js</a>, released under the MIT license</li>
+  <li><a href="https://github.com/Stuk/jszip">JSZip</a> (<a href="https://github.com/Stuk/jszip/tree/v2.6.1">v1.8.2</a> which has a synchronous API), dual-licensed under the MIT or GPLv3</li>
+
 </ul>
 
 <section id="introduction">
@@ -754,7 +761,7 @@ function git_branch(branch_name, commit_ref, force) {
   var branch_path = '.git/refs/heads/' + branch_name;
   var full_branch_path = join_paths(current_directory, branch_path);
   if (!force && exists(full_branch_path)) {
-    alert("branch already exists");
+    alert("branch already exists: " + branch_name);
     return false;
   } else {
     write(full_branch_path, commit_hash + '\n');
@@ -1404,6 +1411,7 @@ function store_index(paths) {
 
   write(join_paths(current_directory, '.git/index'), index)
 }
+store_index(['README', 'src/main.scm']);
 </textarea>
 </section>
   
@@ -1447,6 +1455,24 @@ folder is bit-compatible with the official <code>git log</code>, <code>git statu
 commands.</p>
 </section>
 
+<section id="conclusion">
+  <h1>Conclusion</h1>
+  <p>This article shows that a large part of the core of GIT can be re-implemented in <span class="loc-count">a few</span> source lines of code* (<a href="javascript:___copy_all_code(); void(0);">copy all the code</a>).
+    <span style="font-size: small">*&nbsp;empty lines and single closing braces excluded, <span class="loc-count-total">a few more</span> in total.</span></p>
+  <div id="copy-all-code" style="display: none;"></div>
+  <ul>
+  
+  </ul>
+    <li>Some of the features which may appear mysterious at first sight (e.g. detached HEAD) should be clearer with the knowledge of how GIT works behind the scenes.</li>
+    <li>Furthermore, branches are often associated with an intuition (containers into which commits are added) which does not match the implementation (mutable pointers to commits).</li>
+    <li>Finally, it is tempting to think of commits as patches. While <code>darcs</code> tries to expose an interface which matches this intuition, it is clear that the implementation of GIT considers commits as copies of the entire repository, and are linked to the previous version solely by the <code>parent</code> metadata in the commit headers.</li>
+  </ul>
+  <p>A few core commands like <code>git diff</code> and <code>git apply</code> are not described in this tutorial.
+    They are little more than improved versions of the classical *nix commands <code>diff</code> and <code>patch</code>.</p>
+  <p>Most other commands provided by GIT are merely convenience wrappers around these commands. For example, <code>git cherry-pick</code> is simply a combination of <code>git diff</code> between the tree of a commit and the tree of its parent, followed by <code>git apply</code> to apply the patch and <code>git commit</code> to create a new commit whose diff is equivalent to the diff of the original commit. As an other example, the command <code>git rebase</code> performs as succession of <code>cherry-pick</code> operations.</p>
+  <p>By keeping in mind the internal model of GIT, it becomes easier to understand the usual commands and their quirks. By undersanding the design philosophy behind the implementation, the day-to-day usage can become, hopefully, less surprising.</p>
+</section>
+  
 <section id="suggested-exercises">
   <h1>Suggested exercises</h1>
   <p>
@@ -1552,24 +1578,6 @@ commands.</p>
       to the latest commit that are automatically updated.
     </p>
   </section>
-</section>
-
-<section id="conclusion">
-<h1>Conclusion</h1>
-<p>This article shows that a large part of the core of GIT can be re-implemented in <span class="loc-count">a few</span> source lines of code* (<a href="javascript:___copy_all_code(); void(0);">copy all the code</a>).
-  <span style="font-size: small">*&nbsp;empty lines and single closing braces excluded, <span class="loc-count-total">a few more</span> in total.</span></p>
-<div id="copy-all-code" style="display: none;"></div>
-<ul>
-
-</ul>
-  <li>Some of the features which may appear mysterious at first sight (e.g. detached HEAD) should be clearer with the knowledge of how GIT works behind the scenes.</li>
-  <li>Furthermore, branches are often associated with an intuition (containers into which commits are added) which does not match the implementation (mutable pointers to commits).</li>
-  <li>Finally, it is tempting to think of commits as patches. While <code>darcs</code> tries to expose an interface which matches this intuition, it is clear that the implementation of GIT considers commits as copies of the entire repository, and are linked to the previous version solely by the <code>parent</code> metadata in the commit headers.</li>
-</ul>
-<p>A few core commands like <code>git diff</code> and <code>git apply</code> are not described in this tutorial.
-  They are little more than improved versions of the classical *nix commands <code>diff</code> and <code>patch</code>.</p>
-<p>Most other commands provided by GIT are merely convenience wrappers around these commands. For example, <code>git cherry-pick</code> is simply a combination of <code>git diff</code> between the tree of a commit and the tree of its parent, followed by <code>git apply</code> to apply the patch and <code>git commit</code> to create a new commit whose diff is equivalent to the diff of the original commit. As an other example, the command <code>git rebase</code> performs as succession of <code>cherry-pick</code> operations.</p>
-<p>By keeping in mind the internal model of GIT, it becomes easier to understand the usual commands and their quirks. By undersanding the design philosophy behind the implementation, the day-to-day usage can become, hopefully, less surprising.</p>
 </section>
 
 <div id="toc"></div>

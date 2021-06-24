@@ -555,12 +555,17 @@ function ___filesystem_to_string(fs, just_table, previous_filesystem) {
   var html = '';
   if (! just_table) {
     html += 'Filesystem contents: ' + entries.length + " files and directories. "
+      + '<a href="javascript: ___copyzip_click(\'json-'+id+'\');">Download as .zip</a>'
+      + ' or '
       + '<a href="javascript: ___copyprintf_click(\'elem-'+id+'\');">'
       + "Copy commands to recreate in *nix terminal"
       + "</a>."
       + "<br />"
       + '<textarea id="elem-'+id+'" disabled="disabled" style="display:none">'
       + ___specialchars(___filesystem_to_printf(fs) || 'echo "Empty filesystem."')
+      + '</textarea>'
+      + '<textarea id="json-'+id+'" disabled="disabled" style="display:none">'
+      + ___to_hex(JSON.stringify(fs))
       + '</textarea>';
   }
   html += ___filesystem_to_table(fs, previous_filesystem).outerHTML; // TODO: use DOM primitives instead.
@@ -572,6 +577,65 @@ function ___textarea_value(elem) {
   } else {
     return elem.value;
   }
+}
+function ___copyzip_click(id) {
+  var fs = JSON.parse(___hex_to_bin(document.getElementById(id).value));
+
+  var paths = Object.keys(fs);
+  var hierarchy = { subfolders: {}, files: [] };
+
+  // This splits the input paths on occurrences of "/",
+  // and inserts them into the "hierarchy" object.
+  for (var i = 0; i < paths.length; i++) {
+    var path_components = paths[i].split('/');
+    var h = hierarchy;
+    for (var j = 0; j < path_components.length - 1; j++) {
+      if (! h.subfolders.hasOwnProperty(path_components[j])) {
+        h.subfolders[path_components[j]] = {
+          subfolders: {},
+          files: []
+        };
+      }
+      h = h.subfolders[path_components[j]];
+    }
+    if (fs[paths[i]] === null) {
+      // directory
+      h.subfolders[path_components[path_components.length - 1]] = {
+        subfolders: {},
+        files: []
+      }
+    } else {
+      // file
+      h.files[h.files.length] = path_components[path_components.length - 1];
+    }
+  }
+
+  var join_paths = function(a, b) {
+    return (a == "") ? b : (a + "/" + b);
+  }
+  
+  var add_to_zip = function(zip, base_directory, hierarchy) {
+    var subtrees = [];
+    for (var i in hierarchy.subfolders) {
+      if (hierarchy.subfolders.hasOwnProperty(i)) {
+        var zipfolder = zip.folder(i);
+        add_to_zip(zipfolder, join_paths(base_directory, i), hierarchy.subfolders[i]);
+      }
+    }
+    for (var f = 0; f < hierarchy.files.length; f++) {
+      var filename = hierarchy.files[f];
+      zip.file(filename, ___stringToUint8Array(fs[join_paths(base_directory, filename)]), {binary: true});
+    }
+  }
+
+  var zip = new JSZip();
+  add_to_zip(zip, '', hierarchy);
+
+  /*zip.file("Hello.txt", "Hello World\n");
+  var img = zip.folder("images");
+  img.file("Foo.txt", ___stringToUint8Array("ha\xffha\0ha\n"), {binary: true});*/
+  var content = zip.generate({type:"blob"});
+  saveAs(content, "filesystem_git_tutorial.zip");
 }
 function ___copyprintf_click(id) {
   ___hilite_off();
@@ -677,8 +741,8 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
   // contents of the file as a tooltip:
   gv += ___quote_gv(x[0]) + ' [ tooltip = ' + ___quote_gv(x[0]) + ' ]';
 
-  var id = ___global_unique_id++;
-  gv += ___quote_gv(x[0]) + ' [ id=' + id + ' ]';
+  var id = 'gv-' + (___global_unique_id++);
+  gv += ___quote_gv(x[0]) + ' [ id="' + id + '" ]';
 
   if (x[1] === null) {
     shortname = shortname + '\ndirectory';
