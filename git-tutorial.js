@@ -600,9 +600,12 @@ function ___copyzip_click(id) {
     }
     if (fs[paths[i]] === null) {
       // directory
-      h.subfolders[path_components[path_components.length - 1]] = {
-        subfolders: {},
-        files: []
+      var last_component = path_components[path_components.length - 1];
+      if (!h.subfolders.hasOwnProperty(last_component)) {
+        h.subfolders[last_component] = {
+          subfolders: {},
+          files: []
+        };
       }
     } else {
       // file
