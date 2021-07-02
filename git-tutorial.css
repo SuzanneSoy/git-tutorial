@@ -145,3 +145,5 @@ article#git-tutorial .onlytoc { display: none; }
 #git-tutorial .exercise-reason:before { content: "Rationale "; margin-bottom: 0.7em; font-weight: bold; display: block; }
 #git-tutorial .log-alert { color: red; font-weight: 500; }
 #git-tutorial input[type='button'] { display: inline-block; margin-top: 0.2em; }
+
+#git-tutorial .dep-license { display: none; font-size: 80%; width: 100%; overflow-x: auto; }

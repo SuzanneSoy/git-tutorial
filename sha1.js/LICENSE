@@ -1,0 +1,10 @@
+I offer these scripts for free use and adaptation to balance my debt to the
+open-source info-verse. You are welcome to re-use these scripts [under an MIT
+licence, without any warranty express or implied] provided solely that you
+retain my copyright notice and a link to this page.
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  */
+/* SHA-1 (FIPS 180-4) implementation in JavaScript                    (c) Chris Veness 2002-2019  */
+/*                                                                                   MIT Licence  */
+/* www.movable-type.co.uk/scripts/sha1.html                                                       */
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  */
