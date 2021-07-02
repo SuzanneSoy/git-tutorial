@@ -39,13 +39,18 @@ function ___example(id, f) {
 </head>
 <body>
 
-<article id="git-tutorial">
+<article id="git-tutorial" itemscope="itemscope" itemtype="http://schema.org/Article">
+
+<h1 itemprop="headline">Git tutorial: reimplementing part of GIT in JavaScript</h1>
+<p class="article-metadata">By <a href="https://suzanne.soy/" itemprop="author" rel="author" itemtype="https://schema.org/Person">Suzanne Soy</a> for <a href="https://ligolang.org/" itemprop="copyrightHolder" itemtype="https://schema.org/Organization">LIGO</a>. <time itemprop="dateCreated datePublished" datetime="2021-06-29">02021-06-29</time>.</p>
+
 <section id="credits-license">
 <h1>Credits and license</h1>
 
+<p>This article was written as part of my work for <a href="https://ligolang.org/">LIGO</a>.</p>
 <p>The main reference for this tutorial is the <a href="https://git-scm.com/book/en/v2/Git-Internals-Git-Objects">Pro Git book</a> section on GIT internals.</p>
 
-<p>This tutorial uses three libraries:</p>
+<p>This tutorial uses these libraries:</p>
 <script>
 function ___toggle_license(id) {
   var el = document.getElementById(id);
