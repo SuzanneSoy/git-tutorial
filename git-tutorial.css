@@ -78,7 +78,7 @@ article#git-tutorial table, #git-tutorial pre.log, #git-tutorial .graph-view { w
 #git-tutorial .deflated { color: red; }
 #git-tutorial .directory { color: darkcyan; }
 #git-tutorial .error { color: orangered; }
-#git-tutorial .newline:after { content: ''; display:inline-block; width:100%; height:0; }
+#git-tutorial .newline:after { content: ''; display:block; width:100%; height:0; }
 #git-tutorial code { word-wrap: break-word; }
 article#git-tutorial .onlytoc { display: none; }
 /* #toc .onlytoc { } */

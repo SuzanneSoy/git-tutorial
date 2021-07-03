@@ -226,23 +226,23 @@ function ___hilite(srcid, destclass) {
     var p4 = { left: xb, top: yb };
 
     // line 1
-    l1.style.width = p2.left-p1.left;
+    l1.style.width = (p2.left-p1.left) + 'px';
     l1.style.height = thickness + 'px';
     l1.style.backgroundColor = 'red';
-    l1.style.top  = p1.top;
-    l1.style.left = p1.left;
+    l1.style.top  = p1.top + 'px';
+    l1.style.left = p1.left + 'px';
     // line 2
     l2.style.width = thickness + 'px';
-    l2.style.height = p3.top-p2.top + thickness;
+    l2.style.height = (p3.top-p2.top + thickness) + 'px';
     l2.style.backgroundColor = 'red';
-    l2.style.top  = p2.top;
-    l2.style.left = p2.left;
+    l2.style.top  = p2.top + 'px';
+    l2.style.left = p2.left +'px';
     // line 3
     l3.style.width = (p3.left-p4.left)+'px';
     l3.style.height = thickness+'px';
     l3.style.backgroundColor = 'red';
-    l3.style.top  = p4.top+'px';
-    l3.style.left = p4.left+'px';
+    l3.style.top  = p4.top + 'px';
+    l3.style.left = p4.left + 'px';
     // arrow
     ar.style.width = '0px';
     ar.style.height = '0px';
