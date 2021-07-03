@@ -10,7 +10,7 @@ article#git-tutorial { position: absolute; top:0; left:0.5em; transition: right,
 #git-tutorial pre.log { border: thin solid gray; padding: 0.3em; font-size: 100%; font-family: monospace; box-sizing: border-box; }
 #git-tutorial .graph-view { font-size: 100%; font-family: monospace; }
 #git-tutorial td.cell-contents, #git-tutorial th.cell-contents { font-family: monospace; }
-article#git-tutorial p, article#git-tutorial h1 { max-width: 63rem; }
+article#git-tutorial p, article#git-tutorial h1, article#git-tutorial h2, article#git-tutorial h3 { max-width: 63rem; }
 
 #git-tutorial td, #git-tutorial th { padding-left: 0.3em; padding-right: 0.3em; }
 #git-tutorial td.cell-contents, #git-tutorial th.cell-contents { width: 36em; }
@@ -84,11 +84,13 @@ article#git-tutorial .onlytoc { display: none; }
 /* #toc .onlytoc { } */
 #git-tutorial #toc .tocsmall { font-size: smaller; }
 #git-tutorial #toc .notoc { display: none; }
-#git-tutorial h1 { display: inline-block; }
-#git-tutorial h1 + p { clear: both; }
-#git-tutorial .permalink { opacity: 0.5; clear: both; padding: 1.2em 1.2em 0 0.5em;
+#git-tutorial h1, #git-tutorial h2, #git-tutorial h3 { display: inline-block; }
+#git-tutorial h1 + p, #git-tutorial h2 + p, #git-tutorial h3 + p { clear: both; }
+#git-tutorial .permalink, #git-tutorial .permalink *, #git-tutorial .permalink:after { text-decoration: none; color: black; }
+#git-tutorial .permalink:after { content: '🔗'; opacity: 0.5; clear: both; padding: 1.2em 1.2em 0 0.5em;
                            font-size: small; text-decoration: none; color: gray; }
-#git-tutorial h1:hover + .permalink, #git-tutorial .permalink:hover { opacity: 1; }
+#git-tutorial .permalink:hover:after { opacity: 1; }
+#git-tutorial .permalink:hover h1, #git-tutorial .permalink:hover h2, #git-tutorial .permalink:hover h3 { text-decoration: underline; }
 #git-tutorial #toc ul { list-style-type: none; padding: 0 !important; /*list-style-type: disc;*/ }
 #git-tutorial #toc a { color: #666; }
 #git-tutorial #toc .function { color: #00f; }
@@ -131,14 +133,14 @@ article#git-tutorial .onlytoc { display: none; }
 #git-tutorial .graph-view .legend { padding: 0.8em 0.3em 0.3em; }
 
 /* Section counters */
-#git-tutorial { counter-reset: h1counter h2counter h3counter; }
-#git-tutorial > section { counter-reset: h2counter h3counter;}
-#git-tutorial > section > h1 { counter-increment: h1counter; }
-#git-tutorial > section > h1::before { content: counter(h1counter) ". " }
-#git-tutorial > section > section { counter-reset: h3counter; }
-#git-tutorial > section > section > h1 { counter-increment: h2counter; }
-#git-tutorial > section > section > h1::before { content: counter(h1counter) "." counter(h2counter) ". " }
-#git-tutorial > section > section.exercise > h1::before { content: "Exercise " counter(h1counter) "." counter(h2counter) ". " }
+#git-tutorial { counter-reset: h1counter h2counter h3counter h4counter; }
+#git-tutorial > section { counter-reset: h3counter;}
+#git-tutorial > section > h2 { counter-increment: h2counter; }
+#git-tutorial > section > h2::before { content: counter(h2counter) ". " }
+#git-tutorial > section > section { counter-reset: h4counter; }
+#git-tutorial > section > section > h3 { counter-increment: h3counter; }
+#git-tutorial > section > section > h3::before { content: counter(h2counter) "." counter(h3counter) ". " }
+#git-tutorial > section > section.exercise > h3::before { content: "Exercise " counter(h2counter) "." counter(h3counter) ". " }
 
 #git-tutorial .exercise-task { border: thin solid #80c5c5; background: #f1faff; padding: 1em }
 #git-tutorial .exercise-reason { border: thin solid #80c5c5; background: #f8fdff; padding: 1em }

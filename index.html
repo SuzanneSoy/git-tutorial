@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" lang="en-GB" xml:lang="en-GB" />
@@ -41,12 +42,12 @@ function ___example(id, f) {
 
 <article id="git-tutorial" itemscope="itemscope" itemtype="http://schema.org/Article">
 
-<h1 itemprop="headline">Git tutorial: reimplementing part of GIT in JavaScript</h1>
-<p class="article-metadata">By <a href="https://suzanne.soy/" itemprop="author" rel="author" itemtype="https://schema.org/Person">Suzanne Soy</a> for <a href="https://ligolang.org/" itemprop="copyrightHolder" itemtype="https://schema.org/Organization">LIGO</a>. <time itemprop="dateCreated datePublished" datetime="2021-06-29">02021-06-29</time>.</p>
+<a href="#" class="permalink"><h1 itemprop="headline">Git tutorial: reimplementing part of GIT in JavaScript</h1></a>
+<p class="article-metadata">By <a href="https://suzanne.soy/" itemprop="author" rel="author" itemscope="itemscope" itemtype="https://schema.org/Person">Suzanne Soy</a> for <a href="https://ligolang.org/" itemprop="copyrightHolder" itemscope="itemscope" itemtype="https://schema.org/Organization">LIGO</a>. <time itemprop="dateCreated datePublished" datetime="2021-06-29">02021-06-29</time>.</p>
 <p>Please send remarks and suggestions to <a href="mailto:git-tutorial@suzanne.soy">git-tutorial@suzanne.soy</a> or simply fork <a href="https://github.com/jsmaniac/git-tutorial">this repository on GitHub</a></p>
 
 <section id="credits-license">
-<h1>Credits and license</h1>
+<h2>Credits and license</h2>
 
 <p>This article was written as part of my work for <a href="https://ligolang.org/">LIGO</a>.</p>
 <p>The main reference for this tutorial is the <a href="https://git-scm.com/book/en/v2/Git-Internals-Git-Objects">Pro Git book</a> section on GIT internals.</p>
@@ -148,7 +149,7 @@ Copyright notice:
 
   (C) 1995-2013 Jean-loup Gailly and Mark Adler
 
-Copyright (c) <''year''> <''copyright holders''>
+Copyright (c) &lt;''year''&gt; &lt;''copyright holders''&gt;
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -237,7 +238,7 @@ GPL version 3
                     GNU GENERAL PUBLIC LICENSE
                         Version 3, 29 June 2007
 
-  Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
+  Copyright (C) 2007 Free Software Foundation, Inc. &lt;http://fsf.org/&gt;
   Everyone is permitted to copy and distribute verbatim copies
   of this license document, but changing it is not allowed.
 
@@ -855,6 +856,7 @@ Program, unless a warranty or assumption of liability accompanies a
 copy of the Program in return for a fee.
     
 END OF TERMS AND CONDITIONS
+</pre>
 </li>
 
 </ul>
@@ -887,7 +889,7 @@ vulnerabilities (user input is not sanitized when displayed).
 </section>
   
 <section id="introduction">
-<h1>Introduction</h1>
+<h2>Introduction</h2>
 <p>
 GIT is based on a simple model, with a lot of shorthands for common
 use cases. This model is sometimes hard to guess just from the
@@ -900,10 +902,10 @@ excluded, <span class="loc-count-total">a few more</span> in total.</span>
 </section>
 
 <section id="os-filesystem">
-<h1>The Operating System's filesystem</h1>
+<h2>The Operating System's filesystem</h2>
 
 <section id="os-filesystem-model">
-<h1>Model of the filesystem</h1>
+<h3>Model of the filesystem</h3>
 <p>The Operating System's filesystem will be simulated by a very
 simple key-value store. In this very simple filesystem, directories
 are entries mapped to <code>null</code> and files are entries mapped
@@ -916,7 +918,7 @@ var current_directory = '';
 </section>
 
 <section id="os-filesystem-functions">
-<h1>Filesystem access functions<span class="notoc"> (<code>read</code>, <code>write</code>, <code>mkdir</code>, <code>exists</code>, <code>remove</code>, <code>cd</code>)</span></h1>
+<h3>Filesystem access functions<span class="notoc"> (<code>read</code>, <code>write</code>, <code>mkdir</code>, <code>exists</code>, <code>remove</code>, <code>cd</code>)</span></h3>
 <p>The filesystem exposes functions to read an entire file, create or
   replace an entire file, create a directory, test the existence of a filesystem entry, and change the current directory.</p>
 <textarea id="in1">
@@ -953,7 +955,7 @@ function remove(path, recursive) {
 </section>
 
 <section id="os-filesystem-listdir">
-<h1>Filesystem access functions<span class="notoc"> (<code>listdir</code>)</span></h1></h1>
+<h3>Filesystem access functions<span class="notoc"> (<code>listdir</code>)</span></h3>
 <p>It will be handy for some operations to list the contents of a
 directory.</p>
 <textarea id="in2">
@@ -979,11 +981,11 @@ function listdir(dirname) {
 </section>
 
 <section id="example-working-directory">
-<h1>Example working tree</h1>
+<h2>Example working tree</h2>
 <p>Our imaginary user will create a <code>proj</code> directory,
 and start filling in some files.</p>
 <div class="trivia">
-  <p trivia>
+  <p>
     A <em>working tree</em> designates the directory (and the subdirectories and files within) in which
     the user will normally view and edit the files. GIT has commands to save the state of the working tree
     (git commit), in order to be able to go back in time later on, and view older versions of the files.
@@ -1007,7 +1009,7 @@ write('proj/src/main.scm', '(map (lambda (x) (+ x 1)) (list 1 2 3))\n');
 </section>
 
 <section id="git-init-dot-git">
-<h1><code>git init</code> (creating <code>.git</code>)</h1>
+<h2><code>git init</code> (creating <code>.git</code>)</h2>
 <p>The first thing to do is to initialize the GIT directory.
 For now, only the <code>.git</code> folder is needed, The rest
 of the function implementing <code>git init</code> will be
@@ -1029,7 +1031,7 @@ git_init_mkdir();
 </section>
 
 <section id="git-hash-object">
-<h1><code>git hash-object</code><span class="notoc"> (storing a copy of a file in <code>.git</code>)</span></h1>
+<h2><code>git hash-object</code><span class="notoc"> (storing a copy of a file in <code>.git</code>)</span></h2>
 <p>The most basic element of a GIT repository is an <em>object</em>. Objects have a type which can be
 <code>blob</code> (individual files), <code>tree</code> (directories),
 <code>commit</code> (pointers to a specific version of the root directory,
@@ -1106,7 +1108,7 @@ function hash_object(must_write, type, is_data, path_or_data) {
 </textarea>
 
 <section id="add-file-to-git">
-<h1>Adding a file to the GIT database</h1>
+<h3>Adding a file to the GIT database</h3>
 <p>So far, our GIT database does not know about any of the user&apos;s
 files. In order to add the contents of the <code>README</code> file in
 the database, we use <code>git hash-object -w -t blob README</code>,
@@ -1132,7 +1134,7 @@ hash_object(true, 'blob', false, 'src/main.scm');
 </section>
 
 <section id="zlib-compression-note">
-<h1><code>zlib</code> compression</h1>
+<h2><code>zlib</code> compression</h2>
 <p>GIT compresses objects with zlib. The <code>deflate()</code> function used in
 the script above comes from the <a href="https://github.com/nodeca/pako">pako 2.0.3</a> library.
 To view a zlib-compressed object in your *nix terminal, simply write this
@@ -1150,7 +1152,7 @@ unzlib() {
 </section>
 
 <section id="storing-trees">
-<h1>Storing trees (list of hashed files and subtrees)</h1>
+<h2>Storing trees (list of hashed files and subtrees)</h2>
 <p>At this point GIT knows about the contents of both of the user's
 files, but it would be nice to also store the filenames.
 This is done by creating a <em>tree</em> object</p>
@@ -1214,7 +1216,7 @@ function hex_to_raw_bytes(hex) {
 </textarea>
 
 <section id="store-tree-example">
-<h1>Example use of <code>store_tree()</code></h1>
+<h3>Example use of <code>store_tree()</code></h3>
 
 <p>The following code, once uncommented, stores into the GIT database the trees for <code>src</code>
 and for the root directory of the GIT project.</p>
@@ -1229,7 +1231,7 @@ the hierarchy, and stores the corresponding trees bottom-up.</p>
 </section>
 
 <section id="store-tree-from-paths">
-<h1>Storing a tree from a list of paths</h1>
+<h3>Storing a tree from a list of paths</h3>
 <p>Making trees out of the subfolders one by one is cumbersome.
 The following utility function takes a list of paths, and builds
 a tree from those.</p>
@@ -1291,7 +1293,7 @@ paths_to_tree(["README", "src/main.scm"]);
 </section>
 
 <section id="store-commit">
-<h1>Storing a commit in the GIT database</h1>
+<h2>Storing a commit in the GIT database</h2>
 <p>Now that the GIT database contains the entire tree for the current version,
 a commit can be created. A commit contains</p>
 <ul>
@@ -1368,7 +1370,7 @@ function format_timezone(tm) {
 </textarea>
 
 <section id="store-commit-example">
-<h1>Storing an example commit</h1>
+<h3>Storing an example commit</h3>
 <p>It is now possible to store a commit in the database. This saves
   a copy of the tree along with some metadata about this version.
   The first commit has no parent, which is represented by passing
@@ -1392,7 +1394,7 @@ var initial_commit = store_commit(
 </section>
 
 <section id="resolving-references">
-<h1>resolving references</h1>
+<h2>resolving references</h2>
 
 <p>The next few subsections will introduce <em>symbolic references</em>
 and other references like branch names, the special name <code>HEAD</code>
@@ -1468,7 +1470,7 @@ function trim_newline(s) {
 </textarea>
 
 <section id="git-symbolic-ref">
-<h1><code>git symbolic-ref</code></h1>
+<h3><code>git symbolic-ref</code></h3>
 <p><code>git symbolic-ref</code> is a low-level command which reads
 (and in the official GIT implementation also writes and updates)
 symbolic references given a path relative to <code>.git/</code>.
@@ -1537,7 +1539,7 @@ function git_symbolic_ref(ref) {
 </section>
   
 <section id="git-rev-parse">
-<h1><code>git rev-parse</code></h1>
+<h3><code>git rev-parse</code></h3>
 <p><code>git rev-parse</code> is another low-level command. It takes a symbolic reference or other reference,
 and returns the hash. The difference with <code>git symbolic-ref</code> is that <code>symbolic-ref</code> follows indirections
 to other references, and returns the last named reference in the chain of indirections, whereas <code>rev-parse</code>
@@ -1577,7 +1579,7 @@ function git_rev_parse(ref) {
 </section>
 
 <section id="git-branch">
-<h1><code>git branch</code></h1>
+<h2><code>git branch</code></h2>
 
 <p>A branch is a pointer to a commit, stored in a file in <code>.git/refs/heads/name_of_the_branch</code>.
 The branch can be overwritten with <code>git branch -f</code>. Also, as will be explained later,
@@ -1649,7 +1651,7 @@ git_branch('main', initial_commit, true);
 </section>
 
 <section id="HEAD">
-<h1><code>HEAD</code></h1>
+<h2><code>HEAD</code></h2>
 <p>
   The <code>HEAD</code> indicates the "current" commit. It is set at first as part of the <code>git init</code> routine.
 </p>
@@ -1682,8 +1684,8 @@ git_init_head();
 <p>
   Since the HEAD is supposed to be a transient pointer, it is easy to lose track of the hash of
   an important commit. For example, the following sequence of operations:
-  
-  <pre>
+</p>
+<pre>
 git checkout 0123456789abcdef0123456789abcdef01234567
 
 touch new_file
@@ -1691,11 +1693,11 @@ git add new_file
 git commit -m 'This is a commit adding a new file'
 
 git checkout branch-of-feature-foobar
-  </pre>
+</pre>
 
-  roughly means:
+<p>roughly means:</p>
 
-  <pre>
+<pre>
 HEAD = 0123456789abcdef0123456789abcdef01234567
 // overwrite the contents of the working tree with
 // the contents of commit 0123456789abcdef0123456789abcdef01234567
@@ -1706,8 +1708,7 @@ HEAD = commit(…)
 
 // Checkout other branch
 HEAD = git_rev_parse('branch-of-feature-foobar')
-  </pre>
-</p>
+</pre>
 
 <p>
   The hash of the new commit which is stored in HEAD on the second step is overwritten
@@ -1746,12 +1747,12 @@ HEAD = git_rev_parse('branch-of-feature-foobar')
 
 
 <section id="git-config">
-  <h1>git config</h1>
-  <p>
-    The official implementation of GIT stores the settings in various files (<code>.git/config</code> within a repository,
-    <code>~/.gitconfig</code> in the user's home folder, and several other places).
-  </p>
-  <textarea id="in16">
+<h2>git config</h2>
+<p>
+  The official implementation of GIT stores the settings in various files (<code>.git/config</code> within a repository,
+  <code>~/.gitconfig</code> in the user's home folder, and several other places).
+</p>
+<textarea id="in16">
 var gitconfig = {
   user: {
     name: 'Ada Lovelace',
@@ -1760,24 +1761,24 @@ var gitconfig = {
 };
 var $EDITOR = function() { return window.prompt('Commit message:'); }
 </textarea>
-  <p>
-    These files use a <code>.ini</code> syntax
-    with <code>key = value</code> lines grouped under some <code>[section]</code> headings. The configuration above could be
-    stored in <code>~/.gitconfig</code> or <code>.git/config</code> using the following syntax:
-  </p>
-  <pre>
+<p>
+  These files use a <code>.ini</code> syntax
+  with <code>key = value</code> lines grouped under some <code>[section]</code> headings. The configuration above could be
+  stored in <code>~/.gitconfig</code> or <code>.git/config</code> using the following syntax:
+</p>
+<pre>
 [user]
 name = Ada Lovelace
 email = ada@analyti.cal
 </pre>
-  <p>
-    The <code>$EDITOR</code> variable is a traditional *NIX environment variable, and could e.g. be declared with
-    <code>EDITOR=nano</code> in <code>~/.profile</code> or <code>~/.bashrc</code>.
-  </p>
+<p>
+  The <code>$EDITOR</code> variable is a traditional *NIX environment variable, and could e.g. be declared with
+  <code>EDITOR=nano</code> in <code>~/.profile</code> or <code>~/.bashrc</code>.
+</p>
 </section>
 
 <section id="git-commit">
-<h1><code>git commit</code></h1>
+<h2><code>git commit</code></h2>
 
 <p>
   The <code>git commit</code> command stores a commit (metadata and a pointer to a tree
@@ -1857,7 +1858,7 @@ var second_commit = git_commit(['README', 'src/main.scm'], 'Some updates');
 </section>
 
 <section id="git-tag">
-<h1><code>git tag</code></h1>
+<h2><code>git tag</code></h2>
 <p>Tags behave like branches, but are stored in <code>.git/refs/tags/the_tag_name</code>
   and a tag is not normally modified. Once created, it's supposed to always point
   to the same version.</p>
@@ -1900,7 +1901,7 @@ git_tag('v1.0', second_commit);
 </section>
 
 <section id="git-checkout">
-<h1><code>git checkout</code></h1>
+<h2><code>git checkout</code></h2>
 <p>
   The <code>git checkout commit-hash-or-reference</code> command modifies the HEAD to point to the given commit,
   and modifies the working tree to match the contents of the tree object pointed to by that commit.
@@ -1920,7 +1921,7 @@ function git_checkout(tag_or_branch_or_hash) {
 }
 </textarea>
 <section id="checkout-branch-vs-other">
-<h1>Checkout, branches and other references</h1>
+<h3>Checkout, branches and other references</h3>
 <p>The HEAD does not normally point to a tag. Although nothing actually
   prevents writing <code>ref: refs/tags/v1.0</code> into <code>.git/HEAD</code>, the GIT
   commands will not automatically do this. For example, <code>git checkout tag-or-branch-or-hash</code>
@@ -1928,7 +1929,7 @@ function git_checkout(tag_or_branch_or_hash) {
 </section>
 
 <section id="checkout-files">
-<h1>Checking out files</h1>
+<h3>Checking out files</h3>
 <p>
   In order to replace the contents of the working tree with those of the given commit, we
   recursively compare the subtrees, deleting from the working tree the files or directories
@@ -1978,7 +1979,7 @@ function checkout_tree(path_prefix, hash) {
 </section>
 
 <section id="parse-assert">
-<h1>Assert</h1>
+<h3>Assert</h3>
 <p>
   The <code>checkout_tree()</code> function needs to read the commit, tree and blob objects from the
   <code>.git/</code> folder. The following sections will introduce some parsers for these objects.
@@ -1992,7 +1993,7 @@ function assert(boolean, text) {
 </section>
   
 <section id="parsed-compressed">
-<h1>Reading compressed objects</h1>
+<h3>Reading compressed objects</h3>
 <p>The GIT objects which are stored in <code>.git/objects</code> are compressed with <code>zlib</code>, and need to be
 uncompressed before they can be parsed. The actual implementation of GIT also stores some objects in <em>packs</em>. Packs
 contain a large number of objects, and used a form of delta compression, which effectively stores objects as the diff with
@@ -2021,7 +2022,7 @@ function parse_object(hash) {
 </section>
 
 <section id="parse-tree">
-<h1>Parsing tree objects</h1>
+<h3>Parsing tree objects</h3>
 <p>We will start by parsing tree objects. As a reminder, a tree object has the following form:</p>
 <div id="example-tree-objects-parse"></div>
 <script class="example">
@@ -2084,7 +2085,7 @@ function to_hex(bin) {
 </section>
 
 <section id="parse-commit">
-<h1>Parsing commit objects</h1>
+<h3>Parsing commit objects</h3>
 <p>The following function is fairly long, but only parses lines of the form <code>header-name header-value</code>
   (with some restrictions depending on the header), followed by a blenk line, and a free-form description.</p>
 <textarea>
@@ -2142,7 +2143,7 @@ function parse_commit(hash) {
 </section>
 
 <section id="parse-author-committer">
-<h1>Parsing author and committer metadata</h1>
+<h3>Parsing author and committer metadata</h3>
 <p>The author and committer metadata has the form <code>Name &lt;email@domain.tld&gt; timestamp +timezone</code>,
 for example <code>Ada Lovelace &lt;ada@analyti.cal&gt; 1617120803 +0100</code></p>
 <textarea>
@@ -2163,7 +2164,7 @@ function parse_author(value, field) {
 </section>
 
 <section id="checkout-example">
-<h1>Example checkout</h1>
+<h3>Example checkout</h3>
 <p>
   Now that we can parse blobs objects, trees, and commits, it is now possible to checkout a given commit.
   The following operation will revert the working tree to the state that was copied in the initial commit.
@@ -2175,7 +2176,7 @@ git_checkout(initial_commit);
 </section>
 
 <section id="git-init">
-<h1><code>git init</code></h1>
+<h2><code>git init</code></h2>
 <p>The <code>git init</code> command creates the <code>.git</code> directory and points <code>.git/HEAD</code>
   to the default branch (a file which does not exist yet, as this branch does not contain any commit at this point).</p>
 <textarea id="in21">
@@ -2187,7 +2188,7 @@ function git_init() {
 </section>
 
 <section id="index">
-<h1>The index</h1>
+<h2>The index</h2>
 <p>When adding files with <code>git add</code>, GIT does not immediately create a commit object.
   Instead, it adds the files to the index, which uses a binary format with lots of metadata.
   The mock filesystem used here lacks most of these pieces of information, so the value <code>0</code>
@@ -2246,7 +2247,7 @@ store_index(['README', 'src/main.scm']);
 </section>
   
 <section id="playground">
-<h1>Playground</h1>
+<h2>Playground</h2>
 <p>The implementation is now sufficiently complete to create a small repository.</p>
 <textarea id="playground-reset">
 // Reset the filesystem to its initial state
@@ -2286,14 +2287,12 @@ commands.</p>
 </section>
 
 <section id="conclusion">
-  <h1>Conclusion</h1>
+  <h2>Conclusion</h2>
   <p>This article shows that a large part of the core of GIT can be re-implemented in <span class="loc-count">a few</span> source lines of code
     <span style="font-size: small">(*&nbsp;empty lines and single closing braces excluded, <span class="loc-count-total">a few more</span> in total)</span>.</p>
   <p>Click here to <a href="javascript:___copy_all_code(); void(0);">copy all the code</a>.</p>
   <div id="copy-all-code" style="display: none;"></div>
   <ul>
-  
-  </ul>
     <li>Some of the features which may appear mysterious at first sight (e.g. detached HEAD) should be clearer with the knowledge of how GIT works behind the scenes.</li>
     <li>Furthermore, branches are often associated with an intuition (containers into which commits are added) which does not match the implementation (mutable pointers to commits).</li>
     <li>Finally, it is tempting to think of commits as patches. While <code>darcs</code> tries to expose an interface which matches this intuition, it is clear that the implementation of GIT considers commits as copies of the entire repository, and are linked to the previous version solely by the <code>parent</code> metadata in the commit headers.</li>
@@ -2305,14 +2304,14 @@ commands.</p>
 </section>
   
 <section id="suggested-exercises">
-  <h1>Suggested exercises</h1>
+  <h2>Suggested exercises</h2>
   <p>
     The reader willing to improve their grasp of GIT's mental model, and reduce their reliance on a few learned recipies, might
     be interested in the following warm-up exercises:
   </p>
 
   <section class="exercise" id="exercise-cat-file">
-    <h1>Inspection using <code>git cat-file</code></h1>
+    <h3>Inspection using <code>git cat-file</code></h3>
     <p class="exercise-task">
       Inspect an existing repository, starting with <code>cat .git/HEAD</code> and using <code>git cat-file -p some-hash</code>
       to pretty-print an object given its hash.
@@ -2327,7 +2326,7 @@ commands.</p>
     </p>
   </section>
   <section class="exercise" id="exercise-files-in-dot-git">
-    <h1>Inspection of the files in <code>.git/</code></h1>
+    <h3>Inspection of the files in <code>.git/</code></h3>
     <p class="exercise-task">
       Inspect a small existing repository, starting with <code>cat .git/HEAD</code> and using the <code>zlib</code> decompression
       tool from the <a href=#zlib-compression-note><code>zlib</code> compression</a> section. Larger repositories will make use
@@ -2343,7 +2342,7 @@ commands.</p>
     </p>
   </section>
   <section class="exercise" id="exercise-repo-from-statch">
-    <h1>Creating a repository from scratch</h1>
+    <h3>Creating a repository from scratch</h3>
     <p class="exercise-task">
       Run <code>git init new-directory</code> in a terminal, and create an initial single-file commit from scratch, using only
       <code>git hash-object</code>, <code>printf</code> and overwriting <code>.git/HEAD</code> and/or
@@ -2363,7 +2362,7 @@ commands.</p>
     </p>
   </section>
   <section class="exercise" id="exercise-only-basic-commands">
-    <h1>Using only basic GIT commands</h1>
+    <h3>Using only basic GIT commands</h3>
     <p class="exercise-task">
       For a couple of weeks, only use the GIT commands <code>commit</code>, <code>diff</code>, <code>checkout</code>,
       <code>merge</code>, <code>cherry-pick</code>, <code>log</code>, <code>clone</code>, <code>fetch</code> and
@@ -2383,7 +2382,7 @@ commands.</p>
     </p>
   </section>
   <section class="exercise" id="exercise-commits-are-copies">
-    <h1>Understanding commits as copies of the root directory</h1>
+    <h3>Understanding commits as copies of the root directory</h3>
     <p class="exercise-task">
       Try not even using <code>git cherry-pick</code> or <code>git diff</code> a few times, instead make two copies the git
       directoy, check out the two different commits in each copy, and use the traditional *NIX commands <code>diff</code> and
@@ -2398,7 +2397,7 @@ commands.</p>
     </p>
   </section>
   <section class="exercise" id="exercise-branches-as-pointers">
-    <h1>Branches as pointers: living without branches</h1>
+    <h3>Branches as pointers: living without branches</h3>
     <p class="exercise-task">
       For a couple of weeks, don't use any local branch, and stay in detached HEAD state all the time. When checking out a
       colleague's work, use <code>git fetch && git checkout origin/remote-branch</code>, and use the reflog and a text file
