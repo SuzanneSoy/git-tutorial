@@ -1173,30 +1173,36 @@ This is done by creating a <em>tree</em> object</p>
   });
 </script>
 
-<p>In the contents of a tree, subdirectories (trees) are listed before files (blobs);
-  within each group the entries are ordered alphabetically.</p>
+<p>In the contents of a tree, the entries are ordered alphabetically.</p>
 
 <textarea id="in8">
 // base_directory is a string
 // filenames is a list of strings
 // subtrees is a list of {name, hash} objects.
 function store_tree(base_directory, filenames, subtrees) {
-  function get_file_hash(filename) {
-    var path = join_paths(base_directory, filename);
-    var hash = hash_object(true, 'blob', false, path)
-    return hex_to_raw_bytes(hash);
+  // entries will contain {name:'…', entry:'…'} objects
+  var entries = [];
+
+  for (var i = 0; i < filenames.length; i++) {
+    var path = join_paths(base_directory, filenames[i]);
+    var hash = hash_object(true, 'blob', false, path);
+    var entry = "100644 " + filenames[i] + "\0" + hex_to_raw_bytes(hash);
+    entries.push({ name: filenames[i], entry: entry });
   }
 
-  var blobs = filenames.map(function (filename) {
-    return "100644 " + filename + "\0" + get_file_hash(filename);
+  for (var j = 0; j < subtrees.length; j++) {
+    var entry = "40000 " + subtrees[j].name + "\0" + hex_to_raw_bytes(subtrees[j].hash);
+    entries.push({ name: subtrees[j], entry: entry });
+  }
+
+  // Sort the entries by name, alphabetically.
+  // Note that this won't work with e.g. unicode names.
+  entries.sort(function (a,b) {
+    return (a.name < b.name ? -1 : (a.name > b.name ? 1 : 0));
   });
 
-  var trees = subtrees.map(function (subtree) {
-    return "40000 " + subtree.name + "\0" + hex_to_raw_bytes(subtree.hash);
-  });
-  
-  // blobs are listed before subtrees
-  var tree_content = blobs.join('') + trees.join('');
+  // concatenate the entries 
+  var tree_content = entries.map(function (entry) { return entry.entry; }).join('');
 
   // cat tree_content | git hash-object -w -t tree --stdin
   return hash_object(true, 'tree', true, tree_content);
@@ -2408,6 +2414,15 @@ commands.</p>
       to the latest commit that are automatically updated.
     </p>
   </section>
+</section>
+
+<section id="corrections">
+  <h2>Mistakes found in previous versions of this article</h2>
+  <ul>
+    <li>The <a href="storing-trees">section on storing tres</a> used to indicate that subtrees appear before blobs in the
+      binary representation of a tree. This was incorrect, the entries are simply sorted alphabetically without any
+      consideration of their type. Thanks Exe for spotting </li>
+  </ul>
 </section>
 
 <div id="toc"></div>
