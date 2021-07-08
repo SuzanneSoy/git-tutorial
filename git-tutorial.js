@@ -73,7 +73,7 @@ function ___to_hex_for_printf(str) {
   return '<span style="display: block;">' + hex + '</span>';
 }
 function ___specialchars_and_colour(s) {
-  return s.replace(/[^-a-zA-Z0-9+_/!%$@.()':]/g, function (c) {
+  return s.replace(/[^-a-zA-Z0-9+_/!%$@.()':^]/g, function (c) {
         switch (c) {
           case " ":  return '<span class="space"> </span>';
           case "\\": return '<span class="specialchar">\\\\</span>';
@@ -733,6 +733,23 @@ var ___script_log_header = '' +
   /*+*/ '})(window.console);\n' +
   /*+*/ '\n';
 
+function ___escape_gv(name) {
+  return name.replace(/[^- a-zA-Z0-9+_/!%$@.()':&<>'…^]/g, function (c) {
+          switch (c) {
+            case "\\": return '\\\\\\\\';
+            case "\0": return '\\\\000';
+            case "\r": return '\\\\r';
+            case "\n": return '\\\\n';
+            case "\t": return '\\\\t';
+            case '"':  return '\\"';
+            default:   return '\\\\x'+___left_pad(c.charCodeAt(0).toString(16), 0, 2)+'';
+          }
+        });
+}
+function ___quote_gv(name) {
+  return '"' + ___escape_gv(name) + '"';
+}
+
 function ___file_contents_to_graphview(filesystem, path_of_this_file, s) {
   var gv = '';
   var s2 = null;
@@ -771,11 +788,6 @@ var ___previous_file_node_style = 'color = "#808080", fontcolor = "#808080", cla
 var ___previous_directory_node_style = 'color = "#80c5c5", fontcolor = "#80c5c5", class = dimmed_previous_directory';
 var ___directory_node_style = 'color = "#008b8b", fontcolor = "#008b8b"'; // darkcyan = #008b8b
 
-function ___quote_gv(name) {
-  if (window.console && window.console.log) { window.console.log('TODO: escape GV'); }
-  return '"' + name.replace('\n', '\\n') + '"';
-}
-
 function ___entry_to_graphview(previous_filesystem, filesystem, x) {
   var gv = '';
   gv += ___quote_gv(x[0]) + '\n';
@@ -783,6 +795,7 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
   var components = x[0].split('/');
 
   var shortname = components[components.length - 1];
+  var type = null;
   if (___is_hashed_object_path(x[0])) {
     // var hash = components.slice(components.length-2).join('');
     shortname = shortname.substr(0, 3) + '…';
@@ -791,8 +804,10 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
   var parent = components.slice(0, components.length - 1).join('/');
   if (parent != '') {
     if (filesystem.hasOwnProperty(parent)) {
+      // show arrow from the parent to this element, if the parent directory exists in the filesystem.
       gv += ___quote_gv(parent) + ' -> ' + ___quote_gv(x[0]) + ' ['+___directory_edge_style+'];\n';
     } else {
+      // if the parent directory was not created in the filesystem, show the full path
       shortname = parent + '/' + shortname;
     }
   }
@@ -800,7 +815,7 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
   // Put a transparent background to make the nodes clickable.
   gv += ___quote_gv(x[0]) + ' [ style="filled", fillcolor="transparent" ]';
 
-  // contents of the file as a tooltip:
+  // full name of the file as a tooltip:
   gv += ___quote_gv(x[0]) + ' [ tooltip = ' + ___quote_gv(x[0]) + ' ]';
 
   var id = 'gv-' + (___global_unique_id++);
@@ -808,9 +823,9 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
 
   if (x[1] === null) {
     if (shortname.length <= 2) {
-      shortname = shortname + '\ndir';
+      type = '(dir)';
     } else {
-      shortname = shortname + '\ndirectory';
+      type = '(directory)';
     }
     if (previous_filesystem.hasOwnProperty(x[0])) {
       // dim nodes that existed in the previous_filesystem
@@ -820,7 +835,7 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
     }
   } else {
     var contents = ___file_contents_to_graphview(filesystem, x[0], x[1]);
-    shortname = shortname + '\n(' + contents.type + ')';
+    type = '(' + contents.type + ')';
     gv += contents.gv;
     if (previous_filesystem.hasOwnProperty(x[0])) {
       // dim nodes that existed in the previous_filesystem
@@ -829,7 +844,7 @@ function ___entry_to_graphview(previous_filesystem, filesystem, x) {
   }
 
   // shortname as a label
-  gv += ___quote_gv(x[0]) + ' [ label = ' + ___quote_gv(shortname) + ' ]';
+  gv += ___quote_gv(x[0]) + ' [ label = "' + ___escape_gv(shortname) + (type == null ? '' : '\\n' + ___escape_gv(type)) + '" ]';
 
   return { id:id, gv:gv };
 }
