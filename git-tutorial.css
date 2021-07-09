@@ -150,3 +150,5 @@ article#git-tutorial .onlytoc { display: none; }
 
 #git-tutorial .dep-license { display: none; font-size: 80%; width: 100%; overflow-x: auto; }
 #git-tutorial .article-metadata { color: #333; font-style: italic; }
+
+#git-tutorial .filename { font-family: monospace; }
