@@ -4,13 +4,11 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" lang="en-GB" xml:lang="en-GB" />
 <title>GIT tutorial</title>
 
-<!-- Replace the "ipfs://…" string below with "#" to obtain the original copy as hosted on IPFS. -->
-<link rel="canonical" class="ipfs-this-hash-placeholder" href="ipfs://bafybeiciboq5zritmgkvmzucvuokajozit7hfwhmappxwmrh2p5zdovdie/" />
+<link rel="canonical" class="ipfs-permalink-href" href="#" />
 <link rel="alternate" href="https://suzanne.soy/git-tutorial/" />
 
 <!-- These rel="duplicate" links use an HTML encoding of the rfc6249 Metalink/HTTP -->
-<!-- Replace the "ipfs://…" string below with "#" to obtain the original copy as hosted on IPFS. -->
-<link rel="duplicate" class="ipfs-this-hash-placeholder" href="ipfs://bafybeiciboq5zritmgkvmzucvuokajozit7hfwhmappxwmrh2p5zdovdie/" />
+<link rel="duplicate" class="ipfs-permalink-href" href="#" />
 <link rel="duplicate" href="https://suzanne.soy/git-tutorial/" />
 
 <!-- Third-party libraries: -->
@@ -54,13 +52,14 @@ function ___example(id, f) {
 <a href="#" class="permalink"><h1 itemprop="headline">Git tutorial: reimplementing part of GIT in JavaScript</h1></a>
 <p class="article-metadata">By <a href="https://suzanne.soy/" itemprop="author" rel="author" itemscope="itemscope" itemtype="https://schema.org/Person">Suzanne Soy</a> for <a href="https://ligolang.org/" itemprop="copyrightHolder" itemscope="itemscope" itemtype="https://schema.org/Organization">LIGO</a>. <time itemprop="dateCreated datePublished" datetime="2021-06-29">02021-06-29</time>.</p>
 <p>Please send remarks and suggestions to <a href="mailto:git-tutorial@suzanne.soy">git-tutorial@suzanne.soy</a> or simply fork <a href="https://github.com/jsmaniac/git-tutorial">this repository on GitHub</a>.</p>
-<p>This version of the site matches the tag <a id="this-version" href="https://github.com/jsmaniac/git-tutorial/tree/v1">v1</a> on GitHub.
-  You can access snapshots of this site via IPFS:
-  <!-- Replace the "ipfs://…" string below with "#" to obtain the original copy as hosted on IPFS. -->
-  <a class="ipfs-this-hash-placeholder" href="ipfs://bafybeiciboq5zritmgkvmzucvuokajozit7hfwhmappxwmrh2p5zdovdie/" title="published shortly after 02021-06-29">v1 (permalink)</a>,
-  or check the
-  <a href="ipns://k51qzi5uqu5dggo2mzf6enn9dpcb2qmd4t9tipend4ikqvvmljo6i63lae4soy/">latest version via IPNS/IPFS</a> or
-  <a href="https://suzanne.soy/git-tutorial/">via HTTPS</a>.</p>
+<p>This version of the site matches the tag <a id="this-version" href="https://github.com/jsmaniac/git-tutorial/tree/v1.0.1">v1.0.1</a> on GitHub.
+  Permalinks to snapshots of this site are available via IPFS:
+  <a class="ipfs-permalink-href" href="#" title="published on 2023-11-21">v1.0.1 (current version)<span class="while-computing-ipfs-permalink"> [computing URL…]</span></a>,
+  <a class="ipfs-this-hash-placeholder" href="ipfs://bafybeiciboq5zritmgkvmzucvuokajozit7hfwhmappxwmrh2p5zdovdie/" title="published shortly after 02021-06-29">v1 (02021-06-29)</a>,
+  Alternatively check the
+  <a href="ipns://git-tutorial.suzanne.soy/">latest version via IPNS/IPFS</a>
+  or
+  <a href="https://suzanne.soy/git-tutorial/">latest via HTTPS</a>.</p>
 
 <section id="credits-license">
 <h2>Credits and license</h2>
@@ -2450,6 +2449,20 @@ commands.</p>
       eval(script);
   })();
   ___git_tutorial_onload()
+</script>
+<!-- IPFS -->
+<script src="sha256.js"></script>
+<script src="micro_ipfs.js"></script>
+<script src="directory_hashes.js"></script>
+<script>
+  (function() {
+    var hash = ipfs_self_hash.get_link();
+    var elts = document.getElementsByClassName('ipfs-permalink-href');
+    for (var i = 0; i < elts.length; i++) { elts[i].setAttribute('href', 'ipfs://' + hash); }
+    //.innerHTML = '<a href="ipfs://' + hash + '/">Permalink: ipfs://'+hash.substring(0,4)+'…'+hash.substring(53)+'/</a>';
+    var elts2 = document.getElementsByClassName('while-computing-ipfs-permalink');
+    for (var i = 0; i < elts2.length; i++) { elts2[i].remove(); }
+  })();
 </script>
 </body>
 </html>
