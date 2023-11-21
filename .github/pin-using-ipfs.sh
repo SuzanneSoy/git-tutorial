@@ -55,22 +55,5 @@ if test -n "${IPFS_REMOTE_API_ENDPOINT:-}" && test -n "${IPFS_REMOTE_TOKEN:-}" &
   done)
 fi
 
-# warm up cache, twice (a few files in the first attempt would likely fail as the DHT propagation is not instant)
-for i in `seq 2`; do
-  ipfs add --progress=false --ignore-rules-path "result/www/.ipfsignore" --pin=false --hidden -r result/www \
-  | cut -d ' ' -f 3- \
-  | sed -e 's~^www/*~~' \
-  | while read f; do
-    if (printf %s\\n "$IPFS_REMOTE_API_ENDPOINT" | grep pinata) >/dev/null 2>&1; then
-      printf "Warming up pinata cache for %s (attempt %d)...\n" "$f" "$i"
-      wget --tries=1 --timeout=10 -O- "https://gateway.pinata.cloud/ipfs/$h/$f" > /dev/null || true
-    fi
-    printf "Warming up Cloudflare cache for %s (attempt %d)...\n" "$f" "$i"
-    wget --tries=1 --timeout=10 -O- "https://cloudflare-ipfs.com/ipfs/$h/$f" > /dev/null || true
-    printf "Warming up dweb.link cache for %s (attempt %d)...\n" "$f" "$i"
-    wget --tries=1 --timeout=10 -O- "https://$h.ipfs.dweb.link/$f" > /dev/null || true
-  done
-done
-
 # Fail job if one of the pinning services didn't work
 exit "$(cat ipfs-pin-global-exitcode)"

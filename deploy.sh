@@ -17,17 +17,7 @@ if ! grep '<a id="this-version" href="https://github.com/jsmaniac/git-tutorial/t
   exit 1
 fi
 
-nix build
-cp result/www/directory_hashes.js directory_hashes.js
-cp result/www/favicon.ico favicon.ico
-cp result/www/sitemap.html sitemap.html
-if test -n "$(git status --short)"; then git commit -a --amend; fi
-nix build
-diff result/www/directory_hashes.js directory_hashes.js
-diff result/www/favicon.ico favicon.ico
-diff result/www/sitemap.html sitemap.html
-
-./.github/print-and-compare-ipfs.sh
+./build-and-update.sh
 
 # Add to IPFS and get the hash
 ipfs_hash="$(./result/www/ipfs-add.sh --pin=true)"

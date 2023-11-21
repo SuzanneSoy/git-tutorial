@@ -41,6 +41,17 @@ jobs:
         run: ./.github/github_install_ipfs.sh
       - name: Print and compare IPFS hahes
         run: export PATH="/tmp/kubo:$PATH"; .github/print-and-compare-ipfs.sh
+      - name: Make tarball of website
+        run: mkdir -p "$RUNNER_TEMP" && tar --directory result/www/ -cvf "$RUNNER_TEMP/artifact.tar" .
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          if-no-files-found: error
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
       - name: Upload to IPFS
         run: PATH="/tmp/kubo:$PATH" ./.github/pin-using-ipfs.sh
         continue-on-error: true
@@ -50,7 +61,7 @@ jobs:
           IPFS_REMOTE_TOKEN: ${{ secrets.IPFS_REMOTE_TOKEN }}
       - name: Install OVH pip package
         run: pip install ovh
-      - name: Install OVH pip package
+      - name: Update OVH _dnslink
         run: python ./.github/update-ovh.py >/dev/null 2>&1
         env:
           API_OVH_APPLICATION_KEY: ${{ secrets.API_OVH_APPLICATION_KEY }}
@@ -59,17 +70,11 @@ jobs:
           API_OVH_ENDPOINT: ${{ secrets.API_OVH_ENDPOINT }}
           OVH_DNS_DOMAIN: ${{ secrets.OVH_DNS_DOMAIN }}
           OVH_DNS_RECORD_ID: ${{ secrets.OVH_DNS_RECORD_ID }}
+      - name: Warm up IPFS gateway caches
+        run: PATH="/tmp/kubo:$PATH" ./.github/warm-up-gateway-caches.sh
 #      - name: Update homepage URL
 #        run: PATH="/tmp/kubo:$PATH" ./.github/github_update_homepage.sh
 #        env:
 #          API_TOKEN_FOR_UPDATE_HOMEPAGE: ${{ secrets.API_TOKEN_FOR_UPDATE_HOMEPAGE }}
 #      - name: Setup Pages
 #        uses: actions/configure-pages@v3
-#      - name: Upload artifact
-#        uses: actions/upload-pages-artifact@v2
-#        with:
-#          # Upload entire repository
-#          path: 'result/www/'
-#      - name: Deploy to GitHub Pages
-#        id: deployment
-#        uses: actions/deploy-pages@v2

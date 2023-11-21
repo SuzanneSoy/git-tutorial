@@ -10,6 +10,8 @@
         src = self;
         buildInputs = with pkgs; [kubo jq nodejs-slim imagemagick];
         buildPhase = ''
+          # TODO: remove files ignored by .ipfsignore during build process
+          
           convert -background none favicon.svg -define icon:auto-resize=64,48,32,16 favicon.ico
 
           mkdir "$out"
