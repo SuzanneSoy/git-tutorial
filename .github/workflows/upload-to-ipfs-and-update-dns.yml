@@ -1,0 +1,75 @@
+# Simple workflow for deploying static content to GitHub Pages
+name: Upload to IPFS
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ["gh-pages"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Single deploy job since we're just deploying
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+      - name: Install Nix
+        uses: cachix/install-nix-action@v17
+      - name: Build website
+        run: nix build
+      - name: Download IPFS
+        run: ./.github/github_install_ipfs.sh
+      - name: Print and compare IPFS hahes
+        run: export PATH="/tmp/kubo:$PATH"; .github/print-and-compare-ipfs.sh
+      - name: Upload to IPFS
+        run: PATH="/tmp/kubo:$PATH" ./.github/pin-using-ipfs.sh
+        continue-on-error: true
+        env:
+          IPFS_SWARM_CONNECT_TO: ${{ secrets.IPFS_SWARM_CONNECT_TO }}
+          IPFS_REMOTE_API_ENDPOINT: ${{ secrets.IPFS_REMOTE_API_ENDPOINT }}
+          IPFS_REMOTE_TOKEN: ${{ secrets.IPFS_REMOTE_TOKEN }}
+      - name: Install OVH pip package
+        run: pip install ovh
+      - name: Install OVH pip package
+        run: python ./.github/update-ovh.py >/dev/null 2>&1
+        env:
+          API_OVH_APPLICATION_KEY: ${{ secrets.API_OVH_APPLICATION_KEY }}
+          API_OVH_APPLICATION_SECRET: ${{ secrets.API_OVH_APPLICATION_SECRET }}
+          API_OVH_CONSUMER_KEY: ${{ secrets.API_OVH_CONSUMER_KEY }}
+          API_OVH_ENDPOINT: ${{ secrets.API_OVH_ENDPOINT }}
+          OVH_DNS_DOMAIN: ${{ secrets.OVH_DNS_DOMAIN }}
+          OVH_DNS_RECORD_ID: ${{ secrets.OVH_DNS_RECORD_ID }}
+#      - name: Update homepage URL
+#        run: PATH="/tmp/kubo:$PATH" ./.github/github_update_homepage.sh
+#        env:
+#          API_TOKEN_FOR_UPDATE_HOMEPAGE: ${{ secrets.API_TOKEN_FOR_UPDATE_HOMEPAGE }}
+#      - name: Setup Pages
+#        uses: actions/configure-pages@v3
+#      - name: Upload artifact
+#        uses: actions/upload-pages-artifact@v2
+#        with:
+#          # Upload entire repository
+#          path: 'result/www/'
+#      - name: Deploy to GitHub Pages
+#        id: deployment
+#        uses: actions/deploy-pages@v2

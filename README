@@ -5,3 +5,8 @@ Viz.js v2.1.2: https://github.com/mdaines/viz.js license MIT
 FileSaver.js: https://github.com/eligrey/FileSaver.js license MIT
 Blob.js: https://github.com/eligrey/Blob.js license MIT license
 JSZip v1.8.2: https://github.com/Stuk/jszip/tree/v2.6.1 license (MIT OR GPLv3)
+
+GitHub depoloyment environment variables:
+* IPFS_REMOTE_API_ENDPOINT: one per line
+* IPFS_REMOTE_TOKEN: one per line (same order as IPFS_REMOTE_API_ENDPOINT)
+* IPFS_SWARM_CONNECT_TO: multiaddr of peers to connect to, to help as intermediaries when connecting to the DHT & pinning services (can be multiaddr of the pinning node itself if known)

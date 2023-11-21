@@ -27,11 +27,17 @@ diff result/www/directory_hashes.js directory_hashes.js
 diff result/www/favicon.ico favicon.ico
 diff result/www/sitemap.html sitemap.html
 
+./.github/print-and-compare-ipfs.sh
+
 # Add to IPFS and get the hash
 ipfs_hash="$(./result/www/ipfs-add.sh --pin=true)"
 printf %s\\n "$ipfs_hash"
 
 git tag "$1"
 git tag "ipfs-$1-${ipfs_hash}"
+
+git push origin HEAD:gh-pages
+git push origin "$1"
+git push origin "ipfs-$1-${ipfs_hash}"
 
 ipfs name publish --key=git-tutorial "/ipfs/$ipfs_hash"

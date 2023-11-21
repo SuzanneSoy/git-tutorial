@@ -19,7 +19,7 @@
             cd "$out/www";
             echo '<!DOCTYPE html><html><head><title>Sitemap</title></head><body>'
             # TODO: honor .ipfsignore
-            find | sed -e 's~.*~<a href="\0">\0</a>~'
+            find | sort | sed -e 's~.*~<a href="\0">\0</a>~'
             echo '</body></html>'
           ) > "$out/www/sitemap.html"
 
