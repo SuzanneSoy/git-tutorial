@@ -1177,7 +1177,12 @@ function ___scrollToLine(editor, line) {
   editor.addLineClass(line, 'background', 'scrolled-to-line');
   var editorOffset = ___getOffset(editor.getScrollerElement()).top;
   var lineOffset = editor.charCoords({line: line, ch: 0}, "local").top;
-  document.body.scrollTo(0, editorOffset + lineOffset - window.innerHeight/2);
+  var toOffset = editorOffset + lineOffset - window.innerHeight/2;
+  document.body.parentElement.scrollTo(0, toOffset);
+  if (document.body.parentElement.scrollTop == 0) {
+    // depending on the CSS, the scrollbar can belong to the HTML element or to the body element.
+    document.body.scrollTo(0, toOffset);
+  }
 }
 function ___toCodeMirror(ta) {
   var editor = CodeMirror.fromTextArea(ta, {
