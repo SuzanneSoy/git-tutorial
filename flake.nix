@@ -14,6 +14,14 @@
 
           mkdir "$out"
           cp -ai . "$out/www"
+          touch "$out/www/sitemap.html"
+          (
+            cd "$out/www";
+            echo '<!DOCTYPE html><html><head><title>Sitemap</title></head><body>'
+            # TODO: honor .ipfsignore
+            find | sed -e 's~.*~<a href="\0">\0</a>~'
+            echo '</body></html>'
+          ) > "$out/www/sitemap.html"
 
           export HOME=.
           ipfs init
